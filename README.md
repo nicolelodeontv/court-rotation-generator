@@ -44,3 +44,7 @@ The generator scores candidate schedules for partner uniqueness, rest balance, o
 For multiple courts, games are assigned rotating court numbers while retaining a simple game-by-game order for live tracking.
 
 QR/share links contain a **snapshot** of the current game. They do not provide live multi-device synchronization.
+
+## Stability
+
+The app is intentionally kept as a dependency-free static site. Popup behavior is handled by the main app and the dedicated name normalizer; no extra session click-interceptor script is required.
