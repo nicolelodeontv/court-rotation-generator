@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Court Rotation Generator</title>
+<style>
+  :root{
+    --ink:#1c2b22;--court-green:#2f5d3a;--court-green-dark:#22452b;--line-white:#f7f4ec;--ball-yellow:#d9c34a;--paper:#f7f4ec;--muted:#5c6b60;--card:#fff;--border:#d8ddd4;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Georgia,'Iowan Old Style',serif;background:var(--paper);color:var(--ink);padding:32px 20px 60px}
+  .wrap{max-width:880px;margin:0 auto}
+  h1{font-size:28px;margin:0 0 4px;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;margin:0 0 28px;max-width:60ch;line-height:1.5}
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:22px 24px;margin-bottom:28px}
+  .row{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end}
+  .field{display:flex;flex-direction:column;gap:6px;font-family:'Helvetica Neue',Arial,sans-serif}
+  .field label{font-size:12.5px;color:var(--muted)}
+  .field input{width:110px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:15px;font-family:inherit;background:#fff}
+  .field textarea{width:280px;height:110px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px;font-family:'Helvetica Neue',Arial,sans-serif;background:#fff;resize:vertical;line-height:1.5}
+  .namecount{font-size:11.5px;color:var(--muted)}
+  .field .hint{font-size:11.5px;color:var(--muted);max-width:180px;line-height:1.4}
+  button{font-family:'Helvetica Neue',Arial,sans-serif;font-size:14.5px;font-weight:600;padding:10px 18px;border-radius:6px;border:none;cursor:pointer;background:var(--court-green);color:var(--line-white);height:38px}
+  button:hover{background:var(--court-green-dark)}
+  button.ghost{background:transparent;color:var(--court-green);border:1px solid var(--court-green)}
+  button.ghost:hover{background:#eef3ec}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  #status{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13.5px;color:var(--muted);margin-top:14px;min-height:18px}
+  #status.err{color:#a13d2f}#status.ok{color:var(--court-green-dark)}
+  .stats{display:flex;gap:28px;flex-wrap:wrap;font-family:'Helvetica Neue',Arial,sans-serif;margin-bottom:18px}
+  .stat .num{font-size:26px;font-weight:700;color:var(--court-green-dark);line-height:1.1}.stat .label{font-size:12px;color:var(--muted)}
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  thead th{text-align:left;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11.5px;letter-spacing:.02em;color:var(--muted);background:#eef1ea;padding:10px 14px;border-bottom:1px solid var(--border)}
+  tbody td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:14.5px;vertical-align:top}
+  tbody tr:last-child td{border-bottom:none}tbody tr:nth-child(even){background:#fbfaf6}
+  .gamenum{font-family:'Helvetica Neue',Arial,sans-serif;font-weight:700;color:var(--court-green-dark);width:52px}
+  .teams{white-space:nowrap}.vs{color:var(--muted);font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;margin:0 8px}
+  .bench{color:var(--muted);font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px}.court-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ball-yellow);margin-right:6px}
+  #outputArea{display:none}.footnote{font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;color:var(--muted);margin-top:14px;line-height:1.5}
+  @media (max-width:700px){body{padding:22px 12px 40px}.panel{padding:18px}.field,.field textarea,.field input{width:100%}.row{gap:14px}.row>button{width:100%}.teams{white-space:normal}table{display:block;overflow-x:auto}thead,tbody,tr{min-width:620px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Court Rotation Generator</h1>
+  <p class="sub">Enter your players' names and this builds a doubles rotation for one court: equal playing time for everyone, and no player ever gets the same partner twice.</p>
+
+  <div class="panel">
+    <div class="row">
+      <div class="field">
+        <label for="playerNames">Player names (one per line)</label>
+        <textarea id="playerNames" placeholder="Alex
+Bailey
+Casey
+Drew
+Emerson
+Finley
+Gray
+Harper
+Indira
+Jordan">Alex
+Bailey
+Casey
+Drew
+Emerson
+Finley
+Gray
+Harper
+Indira
+Jordan</textarea>
+        <div class="namecount"><span id="nameCount">10</span> players entered</div>
+      </div>
+      <div class="field">
+        <label for="gamesEach">Games per player</label>
+        <input type="number" id="gamesEach" value="" placeholder="auto" min="1" />
+        <div class="hint">Leave blank to use a suggested value. Max possible is <span id="maxGames">–</span> (each player can only have so many unique partners).</div>
+      </div>
+      <button id="generateBtn">Generate rotation</button>
+      <button id="regenBtn" class="ghost" style="display:none;">Try another arrangement</button>
+    </div>
+    <div id="status"></div>
+  </div>
+
+  <div id="outputArea">
+    <div class="stats">
+      <div class="stat"><div class="num" id="statGames">–</div><div class="label">total games</div></div>
+      <div class="stat"><div class="num" id="statPlays">–</div><div class="label">games per player</div></div>
+      <div class="stat"><div class="num" id="statBench">–</div><div class="label">games on the bench</div></div>
+    </div>
+
+    <table>
+      <thead><tr><th>Game</th><th>Court</th><th>Sitting out</th></tr></thead>
+      <tbody id="scheduleBody"></tbody>
+    </table>
+
+    <p class="footnote">Every player is guaranteed a new partner each time they play. Opponent matchups may occasionally repeat — with one court, avoiding every repeat opponent while also guaranteeing zero repeat partners isn't always mathematically possible.</p>
+  </div>
+</div>
+
+<script>
+const playerNamesInput=document.getElementById('playerNames'),nameCountSpan=document.getElementById('nameCount'),gamesEachInput=document.getElementById('gamesEach'),maxGamesSpan=document.getElementById('maxGames'),generateBtn=document.getElementById('generateBtn'),regenBtn=document.getElementById('regenBtn'),statusEl=document.getElementById('status'),outputArea=document.getElementById('outputArea'),scheduleBody=document.getElementById('scheduleBody');
+let currentNames=[];
+function parseNames(){const raw=playerNamesInput.value.split('\n'),seen=new Set(),names=[];for(const line of raw){const name=line.trim();if(!name)continue;let label=name,n=2;while(seen.has(label.toLowerCase())){label=`${name} (${n})`;n++}seen.add(label.toLowerCase());names.push(label)}return names}
+function playerLabel(idx){return currentNames[idx-1]||`Player ${idx}`}
+function updateMaxGamesHint(){const names=parseNames(),n=names.length;nameCountSpan.textContent=n;if(!n||n<5){maxGamesSpan.textContent='–';return}maxGamesSpan.textContent=`${n-1} games`}
+playerNamesInput.addEventListener('input',updateMaxGamesHint);updateMaxGamesHint();
+function setStatus(msg,kind){statusEl.textContent=msg;statusEl.className=kind||''}
+function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]]}return arr}
+function combinations4(arr){const res=[],n=arr.length;for(let a=0;a<n;a++)for(let b=a+1;b<n;b++)for(let c=b+1;c<n;c++)for(let d=c+1;d<n;d++)res.push([arr[a],arr[b],arr[c],arr[d]]);return res}
+function pairKey(a,b){return a<b?`${a}-${b}`:`${b}-${a}`}
+function tryOnce(players,numGames,playsPerPlayer){const plays={};players.forEach(p=>plays[p]=0);const usedPartnerPairs=new Set(),games=[],nodeLimitRef={count:0},NODE_LIMIT=40000;function backtrack(gameIdx){nodeLimitRef.count++;if(nodeLimitRef.count>NODE_LIMIT)return false;if(gameIdx===numGames)return players.every(p=>plays[p]===playsPerPlayer);const remainingGames=numGames-gameIdx,stillNeeded=players.reduce((s,p)=>s+(playsPerPlayer-plays[p]),0);if(stillNeeded!==remainingGames*4)return false;let eligible=players.filter(p=>plays[p]<playsPerPlayer);eligible.sort((a,b)=>(playsPerPlayer-plays[b])-(playsPerPlayer-plays[a]));const pool=shuffle(eligible.slice(0,8)),combos=shuffle(combinations4(pool)).slice(0,25);for(const four of combos){const[a,b,c,d]=four;const splits=shuffle([[[a,b],[c,d]],[[a,c],[b,d]],[[a,d],[b,c]]]);for(const[team1,team2]of splits){const k1=pairKey(team1[0],team1[1]),k2=pairKey(team2[0],team2[1]);if(usedPartnerPairs.has(k1)||usedPartnerPairs.has(k2))continue;four.forEach(p=>plays[p]++);usedPartnerPairs.add(k1);usedPartnerPairs.add(k2);games.push([team1.slice(),team2.slice()]);if(backtrack(gameIdx+1))return true;games.pop();usedPartnerPairs.delete(k1);usedPartnerPairs.delete(k2);four.forEach(p=>plays[p]--)}}return false}return backtrack(0)?games.map(g=>g.slice()):null}
+function buildRotation(n,playsPerPlayer,timeBudgetMs){const players=Array.from({length:n},(_,i)=>i+1),totalSlots=n*playsPerPlayer,numGames=Math.round(totalSlots/4);if(numGames*4!==totalSlots)return{error:`${n} players × ${playsPerPlayer} games each isn't divisible into groups of 4. Try a different "games per player" value.`};if(playsPerPlayer>n-1)return{error:`With ${n} players, each player can have at most ${n-1} unique partners, so ${playsPerPlayer} games each isn't possible without repeating a partner.`};const deadline=Date.now()+timeBudgetMs;while(Date.now()<deadline){const result=tryOnce(players,numGames,playsPerPlayer);if(result)return{games:result,numGames,playsPerPlayer}}return{error:'Could not find a valid arrangement in time. Try a lower "games per player" value, or click generate again.'}}
+function suggestPlaysPerPlayer(n){const cap=n-1,candidate=Math.min(cap,6);for(let v=candidate;v>=2;v--)if((n*v)%4===0)return v;for(let v=candidate;v<=cap;v++)if((n*v)%4===0)return v;return candidate}
+function render(n,games,playsPerPlayer,names){currentNames=names;scheduleBody.innerHTML='';document.getElementById('statGames').textContent=games.length;document.getElementById('statPlays').textContent=playsPerPlayer;document.getElementById('statBench').textContent=games.length-playsPerPlayer;const allPlayers=Array.from({length:n},(_,i)=>i+1);games.forEach((g,idx)=>{const[team1,team2]=g,onCourt=new Set([...team1,...team2]),sitting=allPlayers.filter(p=>!onCourt.has(p)),tr=document.createElement('tr');tr.innerHTML=`<td class="gamenum">${idx+1}</td><td class="teams"><span class="court-dot"></span>${playerLabel(team1[0])} &amp; ${playerLabel(team1[1])}<span class="vs">vs</span>${playerLabel(team2[0])} &amp; ${playerLabel(team2[1])}</td><td class="bench">${sitting.map(playerLabel).join(', ')}</td>`;scheduleBody.appendChild(tr)});outputArea.style.display='block';regenBtn.style.display='inline-block'}
+function runGeneration(){const names=parseNames(),n=names.length;if(!n||n<5||n>24){setStatus('Enter between 5 and 24 player names (one per line).','err');outputArea.style.display='none';regenBtn.style.display='none';return}let playsPerPlayer=parseInt(gamesEachInput.value,10);if(!playsPerPlayer||playsPerPlayer<1){playsPerPlayer=suggestPlaysPerPlayer(n);gamesEachInput.placeholder=String(playsPerPlayer)}setStatus('Building a valid rotation…','');generateBtn.disabled=true;regenBtn.disabled=true;setTimeout(()=>{const result=buildRotation(n,playsPerPlayer,3000);generateBtn.disabled=false;regenBtn.disabled=false;if(result.error){setStatus(result.error,'err');outputArea.style.display='none';regenBtn.style.display='none';return}setStatus(`Done — ${result.numGames} games, every player plays ${playsPerPlayer} times with a new partner each game.`,'ok');render(n,result.games,playsPerPlayer,names)},30)}
+generateBtn.addEventListener('click',runGeneration);regenBtn.addEventListener('click',runGeneration);
+</script>
+</body>
+</html>
