@@ -1,0 +1,76 @@
+/* Final visual pass: one consistent green palette. */
+:root{
+  --ui-green:#7fbf8f;
+  --ui-green-strong:#9bd4a8;
+  --ui-green-dark:#18311f;
+  --ui-green-border:#659e73;
+  --ui-green-surface:#172219;
+}
+[data-theme='dark']{
+  --ui-green:#8fc99d;
+  --ui-green-strong:#a9dbb4;
+  --ui-green-dark:#17321f;
+  --ui-green-border:#6fa97c;
+  --ui-green-surface:#1b2920;
+}
+/* Keep the interface green-only; remove the previous blue/lavender/peach button colors. */
+.btn,
+.small-btn,
+.icon-btn,
+.nav-btn.active,
+.hero-badges span,
+.badge,
+.count,
+.stat-chip,
+.rank-chip,
+.sit,
+.next-item,
+.game-status{
+  border-color:var(--ui-green-border)!important;
+}
+.btn,
+.small-btn,
+.icon-btn{
+  background:var(--ui-green)!important;
+  color:var(--ui-green-dark)!important;
+}
+.btn.secondary,
+.btn.ghost,
+.btn.danger{
+  background:var(--ui-green)!important;
+  color:var(--ui-green-dark)!important;
+  border-color:var(--ui-green-border)!important;
+}
+.btn:not(.danger),
+.progress-bar span,
+.live-card,
+.ranking-hero{
+  border-color:var(--ui-green-border)!important;
+}
+.nav-btn.active,
+.hero-badges span,
+.badge,
+.count,
+.stat-chip,
+.rank-chip,
+.sit,
+.next-item,
+.game-status{
+  background:var(--ui-green-surface)!important;
+  color:var(--ui-green-strong)!important;
+}
+.game-label,.rank-pos,.rank-pct,.status.ok,.eyebrow,.brandline{color:var(--ui-green-strong)!important}
+.progress-bar span{background:var(--ui-green)!important}
+.sheet-panel{border:2px solid var(--ui-green-border)!important}
+.complete-rank-row.top-five,
+.complete-rank-row:nth-child(2),
+.complete-rank-row:nth-child(3),
+.rest-rank{
+  background:var(--ui-green-surface)!important;
+  border-color:var(--ui-green-border)!important;
+  color:var(--text)!important;
+}
+.complete-place,.complete-name,.complete-record,.complete-pct{color:var(--text)!important}
+/* Make hidden modals impossible to intercept the page. */
+.sheet[hidden]{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+.sheet:not([hidden]){display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
