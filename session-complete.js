@@ -10,19 +10,20 @@ function openFinalRankings(){
   if(!rows.length)return;
   const ranking=rows.map((row,i)=>{
     const name=row.querySelector('.rank-name')?.textContent?.trim()||`Player ${i+1}`;
-    const record=row.querySelector('.rank-record')?.textContent?.replace(/\s+/g,' ').trim()||'';
-    const pct=row.querySelector('.rank-pct')?.textContent?.replace(/\s+/g,' ').trim()||'';
-    return {name,record,pct};
+    const w=row.querySelector('.rank-chip:nth-child(1)')?.textContent?.trim()||'0W';
+    const l=row.querySelector('.rank-chip:nth-child(2)')?.textContent?.trim()||'0L';
+    const g=row.querySelector('.rank-chip:nth-child(3)')?.textContent?.trim()||'0 games';
+    const pct=row.querySelector('.rank-pct')?.textContent?.trim()||'';
+    return {name,w,l,g,pct:pct.split(/\s+/)[0]||''};
   });
   const top=ranking.slice(0,5),rest=ranking.slice(5);
-  const make=(p,i,topFive=false)=>`<div class="complete-rank-row ${topFive?'top-five':'rest-rank'}"><div class="complete-place">${i+1}${ordinal(i+1)}</div><div class="complete-name">${escapeHtml(p.name)}</div><div class="complete-record">${escapeHtml(p.record)}</div><div class="complete-pct">${escapeHtml(pctText(p.pct))}</div></div>`;
+  const make=(p,i,topFive=false)=>`<div class="complete-rank-row ${topFive?'top-five':''} ${i===0?'first-place':''}"><div class="complete-place">${i===0?'🏆 ':''}${i+1}${ordinal(i+1)}</div><div class="complete-name">${escapeHtml(p.name)}</div><div class="complete-stats"><span>${escapeHtml(p.w)}</span><span>${escapeHtml(p.l)}</span><span>${escapeHtml(p.g)}</span><span>${escapeHtml(p.pct)}${p.pct?'%win':''}</span></div></div>`;
   const html=`<div class="sheet-title">Session complete</div><p class="hint">Final rankings</p><div class="completion-rankings-wrap"><div class="complete-rankings">${top.map((p,i)=>make(p,i,true)).join('')}${rest.map((p,i)=>make(p,i+5,false)).join('')}</div></div><button type="button" class="btn full complete-close" id="completeCloseBtn">Close rankings</button>`;
   content.innerHTML=html;
   sheet.hidden=false;
   const closeBtn=$('completeCloseBtn');
   if(closeBtn)closeBtn.addEventListener('click',close,{once:true});
 }
-function pctText(v){return v?`${v.split(' ')[0]}`:''}
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function watch(){
   const current=$('currentNo');
