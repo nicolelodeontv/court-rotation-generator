@@ -1,0 +1,170 @@
+/* FINAL POPUP + COLOR OVERRIDE: one green system, centered controls. */
+:root{
+  --only-green:#8fcd9d;
+  --only-green-dark:#17321f;
+  --only-green-border:#6fa97c;
+  --only-green-surface:#1b2920;
+  --only-green-soft:#b7e3c1;
+}
+
+/* One green system for every interactive control and ranking accent. */
+.btn,
+.small-btn,
+.icon-btn,
+.nav-btn.active,
+.hero-badges span,
+.badge,
+.count,
+.stat-chip,
+.rank-chip,
+.sit,
+.next-item,
+.game-status,
+.progress-bar span,
+.sheet-close{
+  background:var(--only-green)!important;
+  color:var(--only-green-dark)!important;
+  border-color:var(--only-green-border)!important;
+}
+
+.btn.secondary,
+.btn.ghost,
+.btn.danger{
+  background:var(--only-green)!important;
+  color:var(--only-green-dark)!important;
+  border-color:var(--only-green-border)!important;
+}
+
+.btn:hover,
+.small-btn:hover,
+.icon-btn:hover,
+.sheet-close:hover{
+  background:var(--only-green-soft)!important;
+  color:var(--only-green-dark)!important;
+  border-color:var(--only-green-border)!important;
+}
+
+.game-label,
+.rank-pos,
+.rank-pct,
+.status.ok,
+.eyebrow,
+.brandline{
+  color:var(--only-green-soft)!important;
+}
+
+.nav-btn.active,
+.hero-badges span,
+.badge,
+.count,
+.stat-chip,
+.rank-chip,
+.sit,
+.next-item,
+.game-status{
+  background:var(--only-green-surface)!important;
+  color:var(--only-green-soft)!important;
+  border-color:var(--only-green-border)!important;
+}
+
+.rank-top-title,
+.rank-name,
+.complete-place,
+.complete-name,
+.complete-record,
+.complete-pct{
+  color:var(--text)!important;
+}
+
+.ranking-hero,
+.live-card,
+.progress,
+.game-row,
+.player-card,
+.card,
+.hero{
+  border-color:var(--only-green-border)!important;
+}
+
+/* Every modal is centered. */
+.sheet,
+.sheet.modal-open,
+.sheet:not([hidden]){
+  position:fixed!important;
+  inset:0!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:100%!important;
+  height:100%!important;
+  padding:16px!important;
+}
+.sheet[hidden]{
+  display:none!important;
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+.sheet-panel{
+  position:relative!important;
+  inset:auto!important;
+  margin:0 auto!important;
+  width:min(500px,calc(100vw - 32px))!important;
+  max-width:500px!important;
+  max-height:calc(100vh - 32px)!important;
+  overflow:auto!important;
+  border:2px solid var(--only-green-border)!important;
+}
+
+/* Reset / Restart confirmation buttons: centered and equal size. */
+.confirm-actions{
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:10px!important;
+  width:100%!important;
+  margin:16px auto 0!important;
+}
+.confirm-actions .btn,
+.confirm-actions .btn.full,
+.confirm-actions .modal-cancel,
+.confirm-actions .modal-confirm{
+  flex:0 0 140px!important;
+  width:140px!important;
+  min-width:140px!important;
+  max-width:140px!important;
+  margin:0!important;
+  grid-column:auto!important;
+}
+.confirm-actions .modal-cancel,
+.confirm-actions .modal-confirm{
+  background:var(--only-green)!important;
+  color:var(--only-green-dark)!important;
+  border-color:var(--only-green-border)!important;
+}
+
+.complete-rank-row,
+.complete-rank-row.top-five,
+.complete-rank-row:nth-child(2),
+.complete-rank-row:nth-child(3),
+.rest-rank{
+  background:var(--only-green-surface)!important;
+  color:var(--text)!important;
+  border-color:var(--only-green-border)!important;
+}
+
+@media(max-width:650px){
+  .sheet{padding:10px!important}
+  .sheet-panel{width:min(500px,calc(100vw - 20px))!important;max-height:calc(100vh - 20px)!important}
+  .confirm-actions{flex-direction:column!important;gap:8px!important}
+  .confirm-actions .btn,
+  .confirm-actions .btn.full,
+  .confirm-actions .modal-cancel,
+  .confirm-actions .modal-confirm{
+    flex:0 0 46px!important;
+    width:min(220px,100%)!important;
+    min-width:0!important;
+    max-width:220px!important;
+  }
+}
