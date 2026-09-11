@@ -1,0 +1,25 @@
+{
+  "name": "court-rotation-generator",
+  "version": "1.0.0",
+  "description": "A lightweight browser-based doubles rotation generator for one court",
+  "main": "index.html",
+  "scripts": {
+    "test": "echo \"No tests specified\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nicolelodeontv/court-rotation-generator.git"
+  },
+  "keywords": [
+    "court",
+    "rotation",
+    "generator",
+    "doubles",
+    "sports"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  }
+}
