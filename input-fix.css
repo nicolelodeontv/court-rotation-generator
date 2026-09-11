@@ -1,4 +1,4 @@
-/* Final setup input cleanup. */
+/* Final setup input cleanup: no browser spinners anywhere. */
 .input-with-suffix{position:relative!important;display:flex!important;align-items:center!important;margin-top:6px!important}.input-with-suffix input{margin-top:0!important;padding-right:76px!important}.input-with-suffix span{position:absolute!important;right:11px!important;pointer-events:none!important;color:var(--muted)!important;font-size:12px!important;font-weight:800!important;white-space:nowrap!important}
 #games[readonly]{cursor:default!important;opacity:.9!important}
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{appearance:none!important;-webkit-appearance:none!important;margin:0!important}input[type=number]{-moz-appearance:textfield!important}
