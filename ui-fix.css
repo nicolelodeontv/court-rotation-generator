@@ -20,12 +20,16 @@ h3{font-size:17px!important}
 .field label,.two>label{font-size:12px!important}
 textarea,input,select{font-size:13px!important;padding:9px 10px!important;border-radius:9px!important}
 textarea{min-height:170px!important}
-.row,.quick,.actions,.tool-row,.tool-stack,.game-actions{gap:8px!important;align-items:stretch!important}
-.row>button,.quick>button,.actions>button,.tool-row>button,.tool-stack>button{flex:1 1 150px;min-width:0}
+.row,.quick,.actions,.tool-row{gap:8px!important;align-items:stretch!important}
+.row,.quick,.actions,.tool-row{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));width:100%}
+.row>button,.quick>button,.actions>button,.tool-row>button{min-width:0;width:100%!important;margin:0!important}
+.tool-stack{display:grid!important;grid-template-columns:1fr!important;gap:9px!important;margin-top:10px!important;width:100%!important}
+.tool-stack>button{width:100%!important;min-width:0!important;margin:0!important;display:block!important}
 .btn,.small-btn,.icon-btn{min-height:42px!important;font-size:13px!important;padding:10px 12px!important;line-height:1.15!important}
-.btn.full{flex:1 1 100%;margin-top:14px!important}
+.btn.full{width:100%!important;grid-column:1/-1;margin-top:14px!important}
 #generateBtn{margin-top:16px!important;display:block}
 #shuffleBtn,#copyAllBtn{margin-top:0!important}
+.section-top .row{align-items:stretch!important}
 .progress{padding:10px!important;margin-bottom:10px!important;font-size:12px!important}
 .game-no{font-size:clamp(32px,8vw,54px)!important;margin:10px 0!important}
 .team{font-size:clamp(18px,4vw,27px)!important;min-height:66px!important;padding:12px!important}
@@ -48,15 +52,16 @@ textarea{min-height:170px!important}
 .rank-muted,.rank-note{font-size:10px!important}
 .summary-line{font-size:12px!important;padding:7px 0!important}
 .footer{font-size:10px!important;margin-top:12px!important}
-/* Popup / bottom-sheet: keep paste and winner actions separated. */
-.sheet-panel{padding:20px 16px calc(20px + env(safe-area-inset-bottom))!important}
-.sheet-panel h3,.sheet-title{font:700 21px/1.15 var(--font-display)!important;margin:0 0 8px!important;padding-right:38px}
-.sheet-panel .hint{margin:0 0 14px!important}
-.sheet-panel textarea{display:block;width:100%;min-height:180px!important;margin:10px 0 14px!important}
-.winner-grid{display:grid!important;grid-template-columns:1fr!important;gap:10px!important;margin-top:12px!important}
-.winner-grid .btn{width:100%!important;min-height:48px!important;margin:0!important}
+/* Compact centered bottom-sheet for winner, paste, and other popups. */
+.sheet-panel{left:50%!important;right:auto!important;bottom:12px!important;transform:translateX(-50%)!important;width:min(520px,calc(100% - 24px))!important;max-width:520px!important;max-height:80vh!important;padding:18px 15px calc(18px + env(safe-area-inset-bottom))!important;border-radius:18px!important}
+.sheet-panel h3,.sheet-title{font:700 20px/1.15 var(--font-display)!important;margin:0 0 8px!important;padding-right:38px}
+.sheet-panel .hint{margin:0 0 12px!important}
+.sheet-panel textarea{display:block;width:100%!important;min-height:160px!important;max-height:42vh!important;margin:9px 0 12px!important}
+.winner-grid{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;margin-top:10px!important;width:100%!important}
+.winner-grid .btn{width:100%!important;min-height:46px!important;margin:0!important;white-space:normal!important;overflow-wrap:anywhere!important;word-break:break-word!important}
+#usePaste{margin-top:0!important}
 .sheet-close{z-index:2!important}
-/* Never allow controls to collide or overflow on narrow screens. */
+/* Keep every control group from colliding or overflowing on narrow screens. */
 button{white-space:normal!important;overflow-wrap:anywhere}
 input,select,textarea{max-width:100%;min-width:0}
 @media(max-width:650px){
@@ -65,17 +70,18 @@ input,select,textarea{max-width:100%;min-width:0}
   .grid-setup{gap:9px!important}
   .card,.hero,.live-card,.ranking-hero{padding:11px!important}
   .two{grid-template-columns:1fr 1fr!important;gap:8px!important}
-  .row>button,.quick>button,.actions>button,.tool-row>button{flex:1 1 100%!important;width:100%!important}
+  .row,.quick,.actions,.tool-row{grid-template-columns:1fr!important;gap:8px!important}
+  .row>button,.quick>button,.actions>button,.tool-row>button{width:100%!important}
   .btn.full{margin-top:12px!important}
   #generateBtn{margin-top:18px!important}
   .game-row{grid-template-columns:42px 1fr!important}
   .game-row>div:last-child{grid-column:2!important}
   .section-top{gap:8px!important}
-  .section-top .row{width:100%!important}
-  .section-top .row>button{flex:1 1 100%!important}
+  .section-top .row{width:100%!important;grid-template-columns:1fr!important}
   .bottom-nav{gap:4px!important;padding:4px!important}
   .nav-btn{min-height:48px!important;font-size:15px!important}
   .nav-btn span{font-size:9px!important}
+  .sheet-panel{width:min(520px,calc(100% - 18px))!important;bottom:8px!important}
 }
 @media(min-width:651px){
   .setup-panel .card{min-width:0}
