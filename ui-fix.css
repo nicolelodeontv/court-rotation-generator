@@ -1,0 +1,85 @@
+/* Final UI safety overrides: compact type, consistent spacing, no button collisions. */
+:root{
+  --font-ui:'Inter',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --font-display:'Atkinson Hyperlegible',var(--font-ui);
+}
+html{font-size:15px}
+body{font-family:var(--font-ui);font-size:14px;line-height:1.4;overflow-x:hidden}
+h1{font-size:clamp(27px,5vw,38px)!important}
+h2{font-size:clamp(21px,4vw,28px)!important}
+h3{font-size:17px!important}
+.topbar{margin-bottom:12px!important}
+.topbar p{font-size:13px!important;margin-bottom:12px!important}
+.eyebrow,.brandline{font-size:10px!important;letter-spacing:.1em!important}
+.card,.hero,.live-card,.ranking-hero{padding:13px!important;border-radius:14px!important}
+.grid-setup,.tools-grid,.two,.player-grid,.rankings-list{gap:10px!important}
+.hero{margin-bottom:12px!important}
+.hero p,.hint,.status,.footnote{font-size:12px!important;line-height:1.4!important}
+.field{margin-top:10px!important;gap:5px!important}
+.field:first-child{margin-top:0!important}
+.field label,.two>label{font-size:12px!important}
+textarea,input,select{font-size:13px!important;padding:9px 10px!important;border-radius:9px!important}
+textarea{min-height:170px!important}
+.row,.quick,.actions,.tool-row,.tool-stack,.game-actions{gap:8px!important;align-items:stretch!important}
+.row>button,.quick>button,.actions>button,.tool-row>button,.tool-stack>button{flex:1 1 150px;min-width:0}
+.btn,.small-btn,.icon-btn{min-height:42px!important;font-size:13px!important;padding:10px 12px!important;line-height:1.15!important}
+.btn.full{flex:1 1 100%;margin-top:14px!important}
+#generateBtn{margin-top:16px!important;display:block}
+#shuffleBtn,#copyAllBtn{margin-top:0!important}
+.progress{padding:10px!important;margin-bottom:10px!important;font-size:12px!important}
+.game-no{font-size:clamp(32px,8vw,54px)!important;margin:10px 0!important}
+.team{font-size:clamp(18px,4vw,27px)!important;min-height:66px!important;padding:12px!important}
+.versus{font-size:11px!important}
+.live-meta{font-size:10px!important}
+.sit{font-size:12px!important;padding:10px!important}
+.next-item{font-size:12px!important;padding:9px!important}
+.game-row{padding:10px!important;gap:9px!important}
+.game-label{font-size:14px!important}
+.game-match{font-size:14px!important}
+.game-status{font-size:10px!important}
+.player-card{padding:11px!important}
+.player-card h3{font-size:18px!important}
+.player-links{font-size:12px!important}
+.stat-chip,.badge,.hero-badges span{font-size:10px!important;padding:5px 7px!important}
+.rank-top-title{font-size:clamp(23px,6vw,36px)!important}
+.rank-name{font-size:17px!important}
+.rank-row{padding:10px 11px!important;gap:9px!important}
+.rank-pct{font-size:14px!important}
+.rank-muted,.rank-note{font-size:10px!important}
+.summary-line{font-size:12px!important;padding:7px 0!important}
+.footer{font-size:10px!important;margin-top:12px!important}
+/* Popup / bottom-sheet: keep paste and winner actions separated. */
+.sheet-panel{padding:20px 16px calc(20px + env(safe-area-inset-bottom))!important}
+.sheet-panel h3,.sheet-title{font:700 21px/1.15 var(--font-display)!important;margin:0 0 8px!important;padding-right:38px}
+.sheet-panel .hint{margin:0 0 14px!important}
+.sheet-panel textarea{display:block;width:100%;min-height:180px!important;margin:10px 0 14px!important}
+.winner-grid{display:grid!important;grid-template-columns:1fr!important;gap:10px!important;margin-top:12px!important}
+.winner-grid .btn{width:100%!important;min-height:48px!important;margin:0!important}
+.sheet-close{z-index:2!important}
+/* Never allow controls to collide or overflow on narrow screens. */
+button{white-space:normal!important;overflow-wrap:anywhere}
+input,select,textarea{max-width:100%;min-width:0}
+@media(max-width:650px){
+  body{padding:10px 9px 92px!important;font-size:13px!important}
+  .topbar{gap:8px!important}
+  .grid-setup{gap:9px!important}
+  .card,.hero,.live-card,.ranking-hero{padding:11px!important}
+  .two{grid-template-columns:1fr 1fr!important;gap:8px!important}
+  .row>button,.quick>button,.actions>button,.tool-row>button{flex:1 1 100%!important;width:100%!important}
+  .btn.full{margin-top:12px!important}
+  #generateBtn{margin-top:18px!important}
+  .game-row{grid-template-columns:42px 1fr!important}
+  .game-row>div:last-child{grid-column:2!important}
+  .section-top{gap:8px!important}
+  .section-top .row{width:100%!important}
+  .section-top .row>button{flex:1 1 100%!important}
+  .bottom-nav{gap:4px!important;padding:4px!important}
+  .nav-btn{min-height:48px!important;font-size:15px!important}
+  .nav-btn span{font-size:9px!important}
+}
+@media(min-width:651px){
+  .setup-panel .card{min-width:0}
+  .setup-panel .card:last-child{display:flex;flex-direction:column}
+  .setup-panel .card:last-child .field{width:100%}
+  .setup-panel .card:last-child #generateBtn{margin-top:auto!important}
+}
