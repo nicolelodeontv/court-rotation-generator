@@ -1,27 +1,33 @@
 # Court Rotation Generator
 
-A mobile-first browser app for generating fair doubles rotations for pickleball or badminton.
+A mobile-first court-side planner for fair doubles rotations in pickleball or badminton.
 
-## Features
+## What it includes
 
-- Session setup for player count, player names, games per player, courts, target session length, game duration, rest preference, and randomization mode
-- Fairness-scored randomized schedules
-- No repeated partners whenever mathematically possible
-- Balanced games and sit-outs
-- Reduced repeated four-player groups and repeated opponent matchups
-- Large visual game cards for court-side phone use
-- Live session mode with **Mark game complete** and **Next game**
-- Player availability controls and rebuild support
-- Lock individual matchups; completed and locked games are preserved when rebuilding
-- Player statistics for games, sits, partners, opponents, and balance status
-- Fairness score and session summary
-- Shuffle / better balance
-- Copy schedule, CSV export, and print
-- Save/load player lists locally
+- Session setup: players, games/player, courts, target session length, game duration, rest preference, and randomization mode
+- Fairness-scored rotation generation with no repeated partners when the requested schedule permits it
+- Balanced playing time, sit-outs, opponents, and four-player groups
+- Live **Current Game** hero with court number, matchup, sitting-out players, progress, and one-tap completion
+- Bottom mobile navigation for Setup, Live, Schedule, Players, and More
+- Compact schedule timeline with completed/locked/upcoming states
+- Player availability controls and safe **Rebuild remaining** behavior
+- Locked games and completed games are preserved during rebuilding
+- Player cards with games, sit-outs, partners, opponents, and balance status
+- Court Mode for large, high-readability court-side display
+- High-contrast and large-text preferences
 - Light/dark mode
-- Responsive mobile-first layout with large controls and readable typography
-- Defensive validation and fallback generation attempts for difficult schedules
-- No backend, account, or database required
+- Copy current game, copy full schedule, native share, printable schedule, and CSV export
+- Player list save/load through browser local storage
+- Session code plus QR/share snapshot links
+- Defensive validation and regeneration attempts for difficult combinations
+- Fully static: no account, backend, or database required
+
+## Files
+
+- `index.html` — page structure and navigation
+- `styles.css` — responsive/mobile UI and display modes
+- `scheduler.js` — fair rotation generation and scoring
+- `app.js` — live session state, controls, sharing, export, and UI logic
 
 ## Run locally
 
@@ -29,10 +35,12 @@ Open `index.html` in a modern browser. No build step is required.
 
 ## Deployment
 
-This is a static site and can be deployed directly to GitHub Pages, Netlify, Vercel, or any static hosting provider.
+The project can be deployed directly as a static site to GitHub Pages, Netlify, Vercel, or another static host.
 
 ## Scheduling notes
 
-The generator scores candidates for partner uniqueness, balanced games, balanced sit-outs, opponent repetition, repeated four-player groups, and consecutive rests. Some combinations are mathematically constrained, so the UI reports when the selected settings cannot produce an exact schedule.
+The generator scores candidate schedules for partner uniqueness, rest balance, opponent repetition, repeated four-player groups, and randomized variety. Exact schedules can be mathematically constrained by the number of players and requested games/player, so the app validates impossible combinations and explains when a rebuild cannot preserve all locked/completed games.
 
-For multiple courts, games receive rotating court assignments. The schedule remains in a clear game-by-game order for live session tracking.
+For multiple courts, games are assigned rotating court numbers while retaining a simple game-by-game order for live tracking.
+
+QR/share links contain a **snapshot** of the current game. They do not provide live multi-device synchronization.
