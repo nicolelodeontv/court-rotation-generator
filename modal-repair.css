@@ -1,9 +1,0 @@
-/* Unified popup repair: one reliable centered modal state. */
-.sheet{position:fixed!important;inset:0!important;z-index:1000!important;display:none!important;align-items:center!important;justify-content:center!important;padding:16px!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}
-.sheet.modal-open{display:flex!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important}
-.sheet[hidden]{display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}
-.sheet:not([hidden]){display:flex!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important}
-.sheet-backdrop{position:absolute!important;inset:0!important;background:rgba(0,0,0,.58)!important;pointer-events:auto!important}
-.sheet-panel{position:relative!important;z-index:1001!important;width:min(500px,calc(100vw - 32px))!important;max-width:500px!important;max-height:calc(100vh - 32px)!important;overflow:auto!important;margin:auto!important;padding:18px 16px!important;border-radius:18px!important;background:var(--surface)!important;border:2px solid var(--ui-green-border,var(--green))!important;box-shadow:0 24px 70px rgba(0,0,0,.38)!important}
-.sheet-close{position:absolute!important;top:10px!important;right:10px!important;width:38px!important;height:38px!important;z-index:1002!important;cursor:pointer!important;pointer-events:auto!important;background:var(--ui-green)!important;color:var(--ui-green-dark)!important;border:1px solid var(--ui-green-border)!important;border-radius:50%!important}
-@media(max-width:650px){.sheet{padding:10px!important}.sheet-panel{width:min(500px,calc(100vw - 20px))!important;max-height:calc(100vh - 20px)!important;padding:15px 13px!important}}
