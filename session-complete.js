@@ -17,7 +17,7 @@ function openFinalRankings(){
     return {name,w,l,g,pct:pct.split(/\s+/)[0]||''};
   });
   const top=ranking.slice(0,5),rest=ranking.slice(5);
-  const make=(p,i,topFive=false)=>`<div class="complete-rank-row ${topFive?'top-five':''} ${i===0?'first-place':''}"><div class="complete-place">${i===0?'🏆 ':''}${i+1}${ordinal(i+1)}</div><div class="complete-name">${escapeHtml(p.name)}</div><div class="complete-stats"><span>${escapeHtml(p.w)}</span><span>${escapeHtml(p.l)}</span><span>${escapeHtml(p.g)}</span><span>${escapeHtml(p.pct)}${p.pct?'%win':''}</span></div></div>`;
+  const make=(p,i,topFive=false)=>`<div class="complete-rank-row ${topFive?'top-five':''} ${i===0?'first-place':''}"><div class="complete-place">${i===0?'🏆 ':''}${i+1}${ordinal(i+1)}</div><div class="complete-name">${escapeHtml(p.name)}</div><div class="complete-stats"><span class="complete-wins">${escapeHtml(p.w)}</span><span class="complete-losses">${escapeHtml(p.l)}</span><span class="complete-games-played">${escapeHtml(p.g)}</span></div></div>`;
   const html=`<div class="sheet-title">Session complete</div><p class="hint">Final rankings</p><div class="completion-rankings-wrap"><div class="complete-rankings">${top.map((p,i)=>make(p,i,true)).join('')}${rest.map((p,i)=>make(p,i+5,false)).join('')}</div></div><button type="button" class="btn full complete-close" id="completeCloseBtn">Close rankings</button>`;
   content.innerHTML=html;
   sheet.hidden=false;
