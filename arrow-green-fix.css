@@ -1,8 +1,0 @@
-/* Green desktop form arrows/spinners to match the UI. */
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button{opacity:1;filter:sepia(45%) saturate(650%) hue-rotate(75deg) brightness(88%) contrast(95%)}
-select{accent-color:#8fcd9d}
-@media(min-width:651px){
-  input[type="number"]:focus::-webkit-inner-spin-button,
-  input[type="number"]:hover::-webkit-inner-spin-button{opacity:1}
-}
