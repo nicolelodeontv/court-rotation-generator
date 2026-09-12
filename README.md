@@ -48,3 +48,9 @@ QR/share links contain a **snapshot** of the current game. They do not provide l
 ## Stability
 
 The app is intentionally kept as a dependency-free static site. Popup behavior is handled by the main app and the dedicated name normalizer; no extra session click-interceptor script is required.
+
+## Recent fixes
+
+- Fixed Schedule shuffle/rebalance so it correctly regenerates the schedule and keeps the user on the Schedule view.
+- Standardized Schedule **Result** and **Lock** action styling with the main UI buttons.
+- Added consistent spacing above the Schedule Result/Lock actions.
