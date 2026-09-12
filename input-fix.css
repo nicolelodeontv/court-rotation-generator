@@ -7,4 +7,8 @@ input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-ou
 *::-webkit-scrollbar-button:single-button{display:none!important;width:0!important;height:0!important}
 textarea,.sheet-copy{resize:none!important;-webkit-appearance:none!important;appearance:none!important;background-image:none!important}
 textarea::-webkit-resizer,.sheet-copy::-webkit-resizer{display:none!important;width:0!important;height:0!important}
+/* Keep the pasted player-name field free of browser scrollbar controls. */
+#names{resize:none!important;overflow-y:auto!important;scrollbar-width:none!important}
+#names::-webkit-scrollbar{width:0!important;height:0!important}
+#names::-webkit-scrollbar-track,#names::-webkit-scrollbar-thumb,#names::-webkit-scrollbar-button{display:none!important;width:0!important;height:0!important;background:transparent!important}
 .input-with-suffix{position:relative!important;display:flex!important;align-items:center!important;margin-top:6px!important}.input-with-suffix input{margin-top:0!important;padding-right:76px!important}.input-with-suffix span{position:absolute!important;right:11px!important;pointer-events:none!important;color:var(--muted)!important;font-size:12px!important;font-weight:800!important;white-space:nowrap!important}#games[readonly]{cursor:default!important;opacity:.9!important}@media(max-width:650px){.input-with-suffix input{padding-right:72px!important}.input-with-suffix span{right:10px!important}.input-with-suffix{justify-content:center!important}}
