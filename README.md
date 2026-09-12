@@ -54,3 +54,4 @@ The app is intentionally kept as a dependency-free static site. Popup behavior i
 - Fixed Schedule shuffle/rebalance so it correctly regenerates the schedule and keeps the user on the Schedule view.
 - Standardized Schedule **Result** and **Lock** action styling with the main UI buttons.
 - Added consistent spacing above the Schedule Result/Lock actions.
+- Forced a fresh `main` commit to retrigger the connected Vercel production deployment.
