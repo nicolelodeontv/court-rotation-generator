@@ -2,7 +2,7 @@
 const $=id=>document.getElementById(id);
 
 const e={
-  names:$('names'),count:$('playerCount'),games:$('games'),courts:$('courts'),duration:$('duration'),sessionLength:$('sessionLength'),rest:$('rest'),seed:$('seed'),
+  names:$('names'),count:$('playerCount'),games:$('games'),courts:$('courts'),duration:$('duration'),sessionLength:$('sessionLength'),
   status:$('setupStatus'),generate:$('generateBtn'),shuffle:$('shuffleBtn'),rebuild:$('rebuildBtn'),schedule:$('scheduleList'),players:$('playerCards'),rankings:$('rankingsList'),
   rankTopTitle:$('rankTopTitle'),rankTopMeta:$('rankTopMeta'),rankTopMedal:$('rankTopMedal'),summary:$('summary'),sticky:$('stickyLive'),stickyGame:$('stickyGame'),stickyMatch:$('stickyMatch'),
   liveStatus:$('liveStatus'),currentNo:$('currentNo'),currentCourt:$('currentCourt'),currentTeams:$('currentTeams'),currentSit:$('currentSit'),progressText:$('progressText'),progressPct:$('progressPct'),progressBar:$('progressBar'),
