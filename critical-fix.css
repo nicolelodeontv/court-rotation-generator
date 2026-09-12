@@ -1,6 +1,0 @@
-/* Critical modal visibility fix. hidden modals must never cover the page. */
-.sheet[hidden]{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
-.sheet:not([hidden]){display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
-.sheet{align-items:center!important;justify-content:center!important}
-.sheet-panel{position:relative!important;left:auto!important;right:auto!important;bottom:auto!important;transform:none!important;margin:auto!important}
-#sheetClose{pointer-events:auto!important;cursor:pointer!important;z-index:999!important}
