@@ -1,71 +1,26 @@
 (()=>{'use strict';
 const KEY='crg-session-v2',SKILL_KEY='crg-skills-v1';
-const $=id=>document.getElementById(id);
-const names=$('names'),courts=$('courts'),duration=$('duration'),sessionLength=$('sessionLength'),generate=$('generateBtn');
+const $=id=>document.getElementById(id),names=$('names'),courts=$('courts'),duration=$('duration'),sessionLength=$('sessionLength'),generate=$('generateBtn');
 if(!names||!generate)return;
 const esc=v=>String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
 const title=v=>String(v||'').trim().toLocaleLowerCase().replace(/(^|[\\s'-])([a-zà-ÿ])/g,(_,p,c)=>p+c.toLocaleUpperCase());
-const parseNames=()=>names.value.split(/\\r?\\n/).map(title).filter(Boolean);
+const parseNames=()=>names.value.split(/\r?\n/).map(title).filter(Boolean);
 const skillState=()=>{try{return JSON.parse(localStorage.getItem(SKILL_KEY)||'{}')}catch{return{}}};
 const saveSkills=o=>{try{localStorage.setItem(SKILL_KEY,JSON.stringify(o))}catch{}};
 let skills=skillState();
-function installSkillsUI(){
-  if($('skillSetup'))return;
-  const box=document.createElement('div');box.id='skillSetup';box.className='card';box.style.marginTop='10px';
-  box.innerHTML='<div class="card-head"><h3>Skill levels</h3><span class="count">Optional</span></div><p class="hint">Set a level to reduce mismatched teams. Default is Intermediate.</p><div id="skillRows" class="tool-stack"></div>';
-  const host=names.closest('.card');if(!host)return;
-  host.parentElement?.insertBefore(box,host.nextElementSibling||null);
-  renderSkills();
-  names.addEventListener('input',()=>{renderSkills();saveDraft()},{passive:true});
-}
-function renderSkills(){const rows=$('skillRows');if(!rows)return;const ns=parseNames(),old=skills;rows.innerHTML=ns.length?ns.map(n=>{const v=old[n]||'Intermediate';return `<label class="skill-row" style="display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:8px;align-items:center"><span>${esc(n)}</span><select data-skill="${esc(n)}" aria-label="Skill level for ${esc(n)}"><option${v==='Beginner'?' selected':''}>Beginner</option><option${v==='Intermediate'?' selected':''}>Intermediate</option><option${v==='Advanced'?' selected':''}>Advanced</option></select></label>`}).join(''):'<div class="hint">Add player names to set levels.</div>';rows.querySelectorAll('[data-skill]').forEach(s=>s.addEventListener('change',()=>{skills[s.dataset.skill]=s.value;saveSkills(skills);saveDraft()}))}
+function renderSkills(){const rows=$('skillRows');if(!rows)return;const ns=parseNames();rows.innerHTML=ns.length?ns.map(n=>{const v=skills[n]||'Intermediate';return `<label class="skill-row" style="display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:8px;align-items:center"><span>${esc(n)}</span><select data-skill="${esc(n)}" aria-label="Skill level for ${esc(n)}"><option${v==='Beginner'?' selected':''}>Beginner</option><option${v==='Intermediate'?' selected':''}>Intermediate</option><option${v==='Advanced'?' selected':''}>Advanced</option></select></label>`}).join(''):'<div class="hint">Add player names to set levels.</div>';rows.querySelectorAll('[data-skill]').forEach(s=>s.addEventListener('change',()=>{skills[s.dataset.skill]=s.value;saveSkills(skills);saveDraft()}))}
+function installSkillsUI(){if($('skillSetup'))return;const box=document.createElement('div');box.id='skillSetup';box.className='card';box.style.marginTop='10px';box.innerHTML='<div class="card-head"><h3>Skill levels</h3><span class="count">Optional</span></div><p class="hint">Set a level to balance teams and reduce expert-vs-beginner matchups. Default is Intermediate.</p><div id="skillRows" class="tool-stack"></div>';const host=names.closest('.card');if(!host)return;host.parentElement?.insertBefore(box,host.nextElementSibling||null);renderSkills();names.addEventListener('input',()=>{renderSkills();saveDraft()},{passive:true})}
 function draft(){return{names:parseNames(),courts:courts?.value||'1',duration:duration?.value||'15',sessionLength:sessionLength?.value||'',skills,updatedAt:Date.now()}}
 function saveDraft(){try{localStorage.setItem(KEY,JSON.stringify(draft()))}catch{}}
 function readDraft(){try{const x=JSON.parse(localStorage.getItem(KEY)||'null');return x&&Array.isArray(x.names)?x:null}catch{return null}}
 function button(label,id,cls='btn secondary'){const b=document.createElement('button');b.id=id;b.type='button';b.className=cls;b.textContent=label;return b}
-function installSessionTools(){
-  const card=[...document.querySelectorAll('#moreView .card')][0];if(!card||$('resumeBtn'))return;
-  const stack=card.querySelector('.tool-stack');if(!stack)return;
-  const resume=button('Resume last session','resumeBtn');const save=button('Save session','saveSessionBtn');stack.prepend(resume,save);
-  const note=document.createElement('p');note.id='resumeNote';note.className='hint';stack.after(note);
-  function refresh(){const d=readDraft();note.textContent=d?`Saved ${d.names.length} players · ${new Date(d.updatedAt).toLocaleString()}`:'No saved session yet';resume.disabled=!d}
-  save.addEventListener('click',()=>{saveDraft();refresh();setOfflineStatus()});
-  resume.addEventListener('click',()=>{const d=readDraft();if(!d)return;names.value=d.names.join('\\n');if(courts)courts.value=d.courts;if(duration)duration.value=d.duration;if(sessionLength)sessionLength.value=d.sessionLength||'';skills=d.skills||{};renderSkills();generate.click()});
-  refresh();
-}
-function installOffline(){
-  let b=$('offlineBadge');if(!b){b=document.createElement('div');b.id='offlineBadge';b.style.cssText='position:fixed;left:10px;bottom:96px;z-index:40;padding:7px 10px;border:1px solid var(--green-border);border-radius:999px;background:var(--surface);color:var(--green-soft);font:800 11px/1 var(--ui);box-shadow:var(--shadow)';document.body.appendChild(b)}
-  const sw=()=>{if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{})};sw();setOfflineStatus();window.addEventListener('online',setOfflineStatus);window.addEventListener('offline',setOfflineStatus);
-}
+function installSessionTools(){const card=[...document.querySelectorAll('#moreView .card')][0];if(!card||$('resumeBtn'))return;const stack=card.querySelector('.tool-stack');if(!stack)return;const resume=button('Resume last session','resumeBtn'),save=button('Save session','saveSessionBtn');stack.prepend(resume,save);const note=document.createElement('p');note.id='resumeNote';note.className='hint';stack.after(note);function refresh(){const d=readDraft();note.textContent=d?`Saved ${d.names.length} players · ${new Date(d.updatedAt).toLocaleString()}`:'No saved session yet';resume.disabled=!d}save.addEventListener('click',()=>{saveDraft();refresh();setOfflineStatus()});resume.addEventListener('click',()=>{const d=readDraft();if(!d)return;names.value=d.names.join('\n');if(courts)courts.value=d.courts;if(duration)duration.value=d.duration;if(sessionLength)sessionLength.value=d.sessionLength||'';skills=d.skills||{};renderSkills();generate.click()});refresh()}
+function installOffline(){let b=$('offlineBadge');if(!b){b=document.createElement('div');b.id='offlineBadge';b.style.cssText='position:fixed;left:10px;bottom:96px;z-index:40;padding:7px 10px;border:1px solid var(--green-border);border-radius:999px;background:var(--surface);color:var(--green-soft);font:800 11px/1 var(--ui);box-shadow:var(--shadow)';document.body.appendChild(b)}if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});setOfflineStatus();window.addEventListener('online',setOfflineStatus);window.addEventListener('offline',setOfflineStatus)}
 function setOfflineStatus(){const b=$('offlineBadge');if(!b)return;b.textContent=navigator.onLine?'● Online · saved locally':'● Offline · working locally'}
-function installSubstitution(){
-  const host=document.querySelector('#playersView .section-top');if(!host||$('substituteBtn'))return;
-  const b=button('Substitute player','substituteBtn');host.appendChild(b);
-  b.addEventListener('click',()=>{
-    const lines=parseNames();if(lines.length<2){alert('Add players first.');return}
-    const old=prompt(`Player to replace:\n\\n${lines.map((n,i)=>`${i+1}. ${n}`).join('\\n')}\\n\\nEnter player number:`);const idx=Number(old)-1;if(!Number.isInteger(idx)||!lines[idx])return;
-    const replacement=prompt(`Replace ${lines[idx]} with:`);if(!replacement?.trim())return;
-    const before=(document.querySelector('#scheduleList')?.innerText||'').split(lines[idx]).length-1;
-    const ok=confirm(`${lines[idx]} appears in about ${Math.max(0,before)} scheduled game(s).\\n\\nReplace the player and rebuild the remaining rotation?`);if(!ok)return;
-    lines[idx]=title(replacement);names.value=lines.join('\\n');renderSkills();saveDraft();
-    const rebuild=$('rebuildBtn');if(rebuild)rebuild.click();else generate.click();
-  });
-}
-function installOddGuidance(){
-  const hint=document.querySelector('#setupView .card .hint:last-child');if(!hint)return;
-  hint.textContent='5–24 players. Odd counts use automatic sit-outs; every game clearly shows who is sitting. Duplicate names are labeled automatically.';
-}
-function balanceTeams(result,playerIds){
-  const levels=['Beginner','Intermediate','Advanced'],score={Beginner:1,Intermediate:2,Advanced:3};
-  const ns=parseNames();const skillById=new Map(ns.map((n,i)=>[i+1,skills[n]||'Intermediate']));
-  for(const g of result?.games||[]){const four=g.teams?.flat()||[];if(four.length!==4)continue;
-    const [a,b,c,d]=four;const opts=[[[a,b],[c,d]],[[a,c],[b,d]],[[a,d],[b,c]]];let best=opts[0],bestDiff=Infinity;
-    for(const pair of opts){const x=score[skillById.get(pair[0][0])]||2)+(score[skillById.get(pair[0][1])]||2),y=(score[skillById.get(pair[1][0])]||2)+(score[skillById.get(pair[1][1])]||2),diff=Math.abs(x-y);if(diff<bestDiff){bestDiff=diff;best=pair}}
-    g.teams=[best[0].slice(),best[1].slice()];
-  }
-  return result;
-}
-const originalGenerate=window.RotationScheduler?.generate;if(originalGenerate&&!window.RotationScheduler.__skillBalanced){window.RotationScheduler.generate=function(cfg){const r=originalGenerate(cfg);return balanceTeams(r,cfg.players)};window.RotationScheduler.__skillBalanced=true}
-function watchGeneration(){const saveAfter=()=>setTimeout(saveDraft,120);generate.addEventListener('click',saveAfter,{capture:true});document.addEventListener('click',e=>{if(e.target.closest('[data-result],[data-lock],#completeBtn,#nextBtn,#restartBtn,#shuffleBtn,#rebuildBtn'))setTimeout(saveDraft,180)},{passive:true});}
+function installSubstitution(){const host=document.querySelector('#playersView .section-top');if(!host||$('substituteBtn'))return;const b=button('Substitute player','substituteBtn');host.appendChild(b);b.addEventListener('click',()=>{const lines=parseNames();if(lines.length<2){alert('Add players first.');return}const old=prompt(`Player to replace:\n\n${lines.map((n,i)=>`${i+1}. ${n}`).join('\n')}\n\nEnter player number:`),idx=Number(old)-1;if(!Number.isInteger(idx)||!lines[idx])return;const replacement=prompt(`Replace ${lines[idx]} with:`);if(!replacement?.trim())return;const before=(document.querySelector('#scheduleList')?.innerText||'').split(lines[idx]).length-1;if(!confirm(`${lines[idx]} appears in about ${Math.max(0,before)} scheduled game(s).\n\nReplace the player and rebuild the remaining rotation?`))return;lines[idx]=title(replacement);names.value=lines.join('\n');renderSkills();saveDraft();$('rebuildBtn')?.click()||generate.click()})}
+function installOddGuidance(){const hint=document.querySelector('#setupView .card .hint:last-child');if(hint)hint.textContent='5–24 players. Odd counts use automatic sit-outs; every game clearly shows who is sitting. Duplicate names are labeled automatically.'}
+function balanceTeams(result){const score={Beginner:1,Intermediate:2,Advanced:3},ns=parseNames(),skillById=new Map(ns.map((n,i)=>[i+1,skills[n]||'Intermediate']));for(const g of result?.games||[]){const four=g.teams?.flat()||[];if(four.length!==4)continue;const [a,b,c,d]=four,opts=[[[a,b],[c,d]],[[a,c],[b,d]],[[a,d],[b,c]]];let best=opts[0],bestDiff=Infinity;for(const pair of opts){const x=(score[skillById.get(pair[0][0])]||2)+(score[skillById.get(pair[0][1])]||2),y=(score[skillById.get(pair[1][0])]||2)+(score[skillById.get(pair[1][1])]||2),diff=Math.abs(x-y);if(diff<bestDiff){bestDiff=diff;best=pair}}g.teams=[best[0].slice(),best[1].slice()]}return result}
+const originalGenerate=window.RotationScheduler?.generate;if(originalGenerate&&!window.RotationScheduler.__skillBalanced){window.RotationScheduler.generate=function(cfg){return balanceTeams(originalGenerate(cfg))};window.RotationScheduler.__skillBalanced=true}
+function watchGeneration(){const saveAfter=()=>setTimeout(saveDraft,120);generate.addEventListener('click',saveAfter,{capture:true});document.addEventListener('click',e=>{if(e.target.closest('[data-result],[data-lock],#completeBtn,#nextBtn,#restartBtn,#shuffleBtn,#rebuildBtn'))setTimeout(saveDraft,180)},{passive:true})}
 installSkillsUI();installSessionTools();installOffline();installSubstitution();installOddGuidance();watchGeneration();
 })();
