@@ -16,4 +16,16 @@ function install(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
 else install();
 window.addEventListener('load',install,{once:true});
+
+/* Load the in-site popup replacement after the main UI scripts are ready. */
+function loadPopupFix(){
+  if(document.getElementById('crgPopupUiFix'))return;
+  const s=document.createElement('script');
+  s.id='crgPopupUiFix';
+  s.src='popup-ui-fix.js?v=crg33';
+  s.async=false;
+  document.head.appendChild(s);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadPopupFix,{once:true});
+else loadPopupFix();
 })();
