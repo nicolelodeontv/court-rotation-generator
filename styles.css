@@ -113,6 +113,19 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 }
 @media(min-width:651px){.bottom-nav{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);width:min(780px,calc(100% - 20px));display:grid;grid-template-columns:repeat(6,1fr);background:color-mix(in srgb,var(--surface) 94%,transparent);border:1px solid var(--line);border-radius:18px;padding:6px;box-shadow:0 14px 35px rgba(0,0,0,.16);z-index:30}}
 
+/* Bottom navigation uses the same control language as the main app buttons. */
+.bottom-nav{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:7px;gap:7px;box-shadow:var(--shadow);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.nav-btn{min-width:0;min-height:42px;padding:10px 8px;border:1px solid var(--green-border);border-radius:11px;background:transparent;color:var(--green-soft);font:900 12px/1.05 var(--ui);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;transition:transform .15s ease,background .15s ease,color .15s ease,border-color .15s ease}
+.nav-btn span{font-size:11px;line-height:1}
+.nav-btn:hover{background:var(--green-soft);color:var(--green-dark);border-color:var(--green-border)}
+.nav-btn.active{background:var(--green);color:var(--green-dark);border-color:var(--green-border)}
+.nav-btn:active{transform:translateY(1px)}
+@media(max-width:650px){
+  .bottom-nav{bottom:6px;width:calc(100% - 12px);gap:5px;padding:6px;border-radius:13px}
+  .nav-btn{min-height:42px;padding:9px 4px;border-radius:11px;font-size:12px}
+  .nav-btn span{font-size:10px}
+}
+
 @media print{
   body{padding:0;background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;font-size:12pt}
   body>*:not(.app){display:none!important}
