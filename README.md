@@ -4,23 +4,17 @@ A mobile-first court-side planner for fair doubles rotations in pickleball or ba
 
 ## What it includes
 
-- Session setup: players, games/player, courts, target session length, game duration, rest preference, and randomization mode
-- Fairness-scored rotation generation with no repeated partners when the requested schedule permits it
-- Balanced playing time, sit-outs, opponents, and four-player groups
-- Live **Current Game** hero with court number, matchup, sitting-out players, progress, and one-tap completion
-- Bottom mobile navigation for Setup, Live, Schedule, Players, and More
-- Compact schedule timeline with completed/locked/upcoming states
-- Player availability controls and safe **Rebuild remaining** behavior
-- Locked games and completed games are preserved during rebuilding
-- Player cards with games, sit-outs, partners, opponents, and balance status
-- Court Mode for large, high-readability court-side display
-- High-contrast and large-text preferences
-- Light/dark mode
-- Copy current game, copy full schedule, native share, printable schedule, and CSV export
-- Player list save/load through browser local storage
-- Session code plus QR/share snapshot links
-- Defensive validation and regeneration attempts for difficult combinations
-- Fully static: no account, backend, or database required
+- Session setup for players, courts, game timing, and target session length
+- Fair rotation generation with balanced partners, opponents, play counts, and sit-outs
+- Locked/completed games preserved during rebuilding
+- Live current-game tracking and progress
+- Schedule timeline with shuffle/rebalance
+- Player availability and stats
+- Rankings and game results
+- Court Mode, large text, high contrast, and light/dark mode
+- Copy/share tools, printable schedule, and CSV export
+- Browser local storage for session/player data
+- Fully static: no account, backend, database, or paid feature layer required
 
 ## Files
 
@@ -39,19 +33,12 @@ The project can be deployed directly as a static site to GitHub Pages, Netlify, 
 
 ## Scheduling notes
 
-The generator scores candidate schedules for partner uniqueness, rest balance, opponent repetition, repeated four-player groups, and randomized variety. Exact schedules can be mathematically constrained by the number of players and requested games/player, so the app validates impossible combinations and explains when a rebuild cannot preserve all locked/completed games.
+The generator scores candidate schedules for partner uniqueness, rest balance, opponent repetition, repeated four-player groups, and randomized variety. Exact schedules can be mathematically constrained by the number of players and requested games/player, so the app validates difficult combinations and explains when a rebuild cannot preserve all locked/completed games.
 
 For multiple courts, games are assigned rotating court numbers while retaining a simple game-by-game order for live tracking.
 
-QR/share links contain a **snapshot** of the current game. They do not provide live multi-device synchronization.
+QR/share links contain a snapshot of the current game. They do not provide live multi-device synchronization.
 
 ## Stability
 
-The app is intentionally kept as a dependency-free static site. Popup behavior is handled by the main app and the dedicated name normalizer; no extra session click-interceptor script is required.
-
-## Recent fixes
-
-- Fixed Schedule shuffle/rebalance so it correctly regenerates the schedule and keeps the user on the Schedule view.
-- Standardized Schedule **Result** and **Lock** action styling with the main UI buttons.
-- Added consistent spacing above the Schedule Result/Lock actions.
-- Forced a fresh `main` commit to retrigger the connected Vercel production deployment.
+The app uses a small dependency-free runtime: `index.html`, `styles.css`, `scheduler.js`, and `app.js`. Legacy pricing, Pro, facility, popup, shuffle, and performance patch layers have been removed. Performance limits now live directly inside the core scheduler so there is one generation path instead of stacked overrides.
