@@ -1,1 +1,0 @@
-New core features: browser SAVE/RESUME, offline-ready local persistence, player substitution/rebuild flow, explicit odd-player sit-out guidance, and optional Beginner/Intermediate/Advanced skill balancing.
