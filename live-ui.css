@@ -29,8 +29,9 @@ body.court-mode .live-team-block{gap:10px}
 body.court-mode .live-team-name{font-size:clamp(28px,5vw,64px);line-height:1.05;white-space:normal;overflow-wrap:anywhere;overflow:visible;text-overflow:clip}
 body.court-mode .live-team-skills{font-size:clamp(12px,1.8vw,18px);letter-spacing:.08em}
 body.court-mode .versus{font-size:clamp(14px,2vw,24px);font-weight:950}
-body.court-mode .quick{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:12px;margin-top:clamp(20px,4vw,42px)}
-body.court-mode .quick .btn{min-height:clamp(52px,7vh,70px);font-size:clamp(14px,1.8vw,20px);border-radius:16px}
+/* In Court Mode, both primary actions are intentionally equal full-width controls. */
+body.court-mode .quick{grid-template-columns:1fr;gap:12px;margin-top:clamp(20px,4vw,42px)}
+body.court-mode .quick .btn{grid-column:1/-1;width:100%;min-height:clamp(52px,7vh,70px);font-size:clamp(14px,1.8vw,20px);border-radius:16px}
 body.court-mode .quick .btn.full{margin-top:0}
 @media(max-width:700px){
   body.court-mode{padding:10px 9px}
