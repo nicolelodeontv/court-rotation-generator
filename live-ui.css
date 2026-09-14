@@ -2,3 +2,52 @@
 .live-team-block{display:flex;flex-direction:column;align-items:center;gap:5px;width:100%;min-width:0}.live-team-name{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:800 clamp(18px,4vw,27px)/1.08 var(--display);letter-spacing:-.03em}.live-team-skills{color:var(--accent-soft);font:800 10px/1 var(--ui);letter-spacing:.06em;text-transform:lowercase;white-space:nowrap}.live-team-skills::first-letter{text-transform:lowercase}
 @media(max-width:780px){#liveView>.section-top{align-items:center;flex-wrap:nowrap}#liveView>.section-top>.row{width:auto}.matchup .team{min-width:0}}
 @media(max-width:650px){#liveView>.section-top>div:first-child{flex:1;min-width:0}#liveView>.section-top>.row{width:auto}#liveView>.section-top>.row>button{padding:9px 10px;font-size:11px}.live-team-name{font-size:20px}.live-team-skills{font-size:9px}.matchup .team{padding:11px}}
+
+/* Focused court display. Toggled by the existing court-mode control in app.js. */
+body.court-mode{overflow:hidden;padding-bottom:20px}
+body.court-mode .app{width:min(1400px,100%)}
+body.court-mode .topbar,
+body.court-mode .bottom-nav,
+body.court-mode #stickyLive,
+body.court-mode #liveView>.section-top>div:first-child,
+body.court-mode #liveView>.progress,
+body.court-mode #liveView .more,
+body.court-mode #liveView .upnext,
+body.court-mode #liveView #currentSit{display:none!important}
+body.court-mode #liveView>.section-top{display:flex;justify-content:flex-end;margin-bottom:16px}
+body.court-mode #liveView>.section-top>.row{width:auto;margin:0}
+body.court-mode #liveView>.section-top>.row>button{min-height:44px;padding:10px 14px}
+body.court-mode #liveView{min-height:calc(100vh - 40px);display:flex;flex-direction:column;justify-content:center;padding:10px 0}
+body.court-mode .live-card{width:100%;min-height:min(760px,calc(100vh - 90px));display:flex;flex-direction:column;justify-content:center;padding:clamp(24px,5vw,64px);border-width:2px;border-radius:24px;box-shadow:var(--shadow-lg)}
+body.court-mode .live-meta{justify-content:space-between;font-size:clamp(13px,1.6vw,18px);margin-bottom:clamp(14px,3vw,28px)}
+body.court-mode .badge{padding:8px 12px;font-size:clamp(11px,1.3vw,15px)}
+body.court-mode #currentCourt{font-size:clamp(20px,3vw,34px);font-weight:950;color:var(--accent-soft)}
+body.court-mode .game-no{font-size:clamp(48px,8vw,96px);text-align:center;margin:0 0 clamp(20px,4vw,44px)}
+body.court-mode .matchup{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:clamp(16px,4vw,48px);width:100%}
+body.court-mode .team{min-height:clamp(150px,24vh,250px);padding:clamp(20px,3vw,40px);justify-content:center;text-align:center;border-radius:20px}
+body.court-mode .live-team-block{gap:10px}
+body.court-mode .live-team-name{font-size:clamp(28px,5vw,64px);line-height:1.05;white-space:normal;overflow-wrap:anywhere;overflow:visible;text-overflow:clip}
+body.court-mode .live-team-skills{font-size:clamp(12px,1.8vw,18px);letter-spacing:.08em}
+body.court-mode .versus{font-size:clamp(14px,2vw,24px);font-weight:950}
+body.court-mode .quick{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:12px;margin-top:clamp(20px,4vw,42px)}
+body.court-mode .quick .btn{min-height:clamp(52px,7vh,70px);font-size:clamp(14px,1.8vw,20px);border-radius:16px}
+body.court-mode .quick .btn.full{margin-top:0}
+@media(max-width:700px){
+  body.court-mode{padding:10px 9px}
+  body.court-mode #liveView{min-height:calc(100vh - 20px);padding:0}
+  body.court-mode .live-card{min-height:calc(100vh - 62px);padding:18px 14px;border-radius:18px}
+  body.court-mode .live-meta{margin-bottom:12px}
+  body.court-mode #currentCourt{font-size:20px}
+  body.court-mode .game-no{margin-bottom:18px}
+  body.court-mode .matchup{grid-template-columns:1fr;gap:10px}
+  body.court-mode .team{min-height:120px;padding:18px}
+  body.court-mode .live-team-name{font-size:clamp(28px,9vw,44px)}
+  body.court-mode .versus{padding:2px 0;font-size:12px}
+  body.court-mode .quick{grid-template-columns:1fr;gap:9px;margin-top:18px}
+  body.court-mode .quick .btn{min-height:54px;font-size:15px}
+}
+@media(max-width:380px){
+  body.court-mode .live-card{padding:14px 10px}
+  body.court-mode .team{min-height:105px}
+  body.court-mode .live-team-name{font-size:28px}
+}
