@@ -44,6 +44,8 @@ async function assertLiveFormatting(page, totalGames) {
   expect(skillTexts.every(text => /^\s*·\s*(BEGINNER|INTERMEDIATE|ADVANCED)\s*$/i.test(text))).toBeTruthy();
   const compactUpNext = (await page.locator('#upNextList').innerText()).replace(/\s+/g, ' ');
   expect(compactUpNext).not.toMatch(/[A-Za-z][A-Za-z]+(?:BEGINNER|INTERMEDIATE|ADVANCED)/i);
+
+  return (await page.locator('#currentTeams .live-player-name').allTextContents()).map(s => s.trim());
 }
 
 async function getSnapshotUrl(page) {
@@ -53,43 +55,43 @@ async function getSnapshotUrl(page) {
   return page.evaluate(() => window.__crgCopiedText);
 }
 
-async function assertSpectatorCurrentCard(browser, snapshotUrl, expectedNames) {
+async function assertSpectatorCurrentCard(browser, snapshotUrl, expectedNames, screenshotName) {
   const spectator = await browser.newPage();
   await spectator.goto(snapshotUrl);
   await spectator.waitForLoadState('domcontentloaded');
   await expect(spectator.locator('.spectator-current')).toBeVisible();
 
   const currentNames = spectator.locator('.spectator-current .spectator-player-name');
-  await expect(currentNames).toHaveCount(4);
+  await expect(currentNames).toHaveCount(expectedNames.length);
   const actual = (await currentNames.allTextContents()).map(s => s.trim());
   expect(actual).toEqual(expectedNames);
 
   const scheduleNames = spectator.locator('.spectator-game .spectator-player-name');
-  expect(await scheduleNames.count()).toBeGreaterThanOrEqual(4);
+  expect(await scheduleNames.count()).toBeGreaterThanOrEqual(expectedNames.length);
   for (const name of expectedNames) {
     await expect(spectator.locator('.spectator-game').first()).toContainText(name);
   }
 
-  await spectator.screenshot({ path: `test-results/spectator-current-${expectedNames.length}-players.png`, fullPage: true });
+  await spectator.screenshot({ path: `test-results/${screenshotName}`, fullPage: true });
   await spectator.close();
 }
 
 test('36-game live formatting and spectator current card stay correct', async ({ page, browser }) => {
   await prepareClipboardCapture(page);
   await generateScenario(page, 24, 36);
-  await assertLiveFormatting(page, 36);
+  const currentNames = await assertLiveFormatting(page, 36);
   await page.screenshot({ path: 'test-results/live-36-game-formatting.png', fullPage: true });
 
   const snapshotUrl = await getSnapshotUrl(page);
-  await assertSpectatorCurrentCard(browser, snapshotUrl, ['Player 1', 'Player 2', 'Player 3', 'Player 4'].sort());
+  await assertSpectatorCurrentCard(browser, snapshotUrl, currentNames, 'spectator-current-36-games.png');
 });
 
 test('15-game live formatting and spectator current card stay correct', async ({ page, browser }) => {
   await prepareClipboardCapture(page);
   await generateScenario(page, 10, 15);
-  await assertLiveFormatting(page, 15);
+  const currentNames = await assertLiveFormatting(page, 15);
   await page.screenshot({ path: 'test-results/live-15-game-formatting.png', fullPage: true });
 
   const snapshotUrl = await getSnapshotUrl(page);
-  await assertSpectatorCurrentCard(browser, snapshotUrl, ['Player 1', 'Player 2', 'Player 3', 'Player 4'].sort());
+  await assertSpectatorCurrentCard(browser, snapshotUrl, currentNames, 'spectator-current-15-games.png');
 });
