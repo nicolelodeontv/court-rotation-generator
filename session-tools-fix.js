@@ -49,7 +49,8 @@ function cleanup(){
  const legacySnapshot=$('snapshotLinkBtn');if(legacySnapshot)legacySnapshot.remove();
  $('shareDisplayBtn')?.remove();
  $('liveSyncBtn')?.remove();
- const share=$('shareSessionBtn');if(share)share.textContent='Share session schedule';
+ const share=$('shareSessionBtn');
+ if(share&&share.textContent!=='Share session schedule')share.textContent='Share session schedule';
  let hint=$('sessionToolsHint');
  const stack=document.querySelector('#moreView .card .tool-stack');
  if(stack&&!hint){hint=document.createElement('p');hint.id='sessionToolsHint';hint.className='hint';stack.after(hint)}
@@ -60,7 +61,7 @@ window.addEventListener('error',event=>{if(!lastAction||Date.now()-lastActionAt>
 window.addEventListener('unhandledrejection',event=>{if(!lastAction||Date.now()-lastActionAt>5000)return;showFailure(lastAction.label,event.reason,lastAction.button)},{capture:true});
 document.addEventListener('click',captureAction,true);
 function boot(){cleanup();const root=$('moreView');if(!root)return;
-// Safe observer: scoped to #moreView and cleanup writes sessionToolsHint idempotently, so it cannot observe and repeat its own write forever.
-new MutationObserver(cleanup).observe(root,{subtree:true,childList:true,attributes:true,attributeFilter:['disabled','id','class']})}
+// Safe observer: scoped to #moreView, observes only structural changes, and all cleanup writes are idempotent.
+new MutationObserver(cleanup).observe(root,{subtree:true,childList:true})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
