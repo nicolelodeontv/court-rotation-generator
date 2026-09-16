@@ -4,6 +4,8 @@ function injectPolishStyles(){if(document.getElementById('uiPolishStyles'))retur
 function fixSticky(){const game=$('stickyGame'),match=$('stickyMatch');if(!game||!match||!game.textContent||!match.textContent)return;const m=game.textContent.match(/GAME\s+(\d+)/i);if(!m)return;const summary=match.textContent.trim();if(summary&&summary!=='Current game'&&summary!=='Generate a rotation to begin'){game.textContent=`Game ${m[1]} — ${summary}`;match.textContent='';match.hidden=true}}
 function escapeHtml(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function fixSchedule(){document.querySelectorAll('.game-match').forEach(el=>{const text=el.textContent.replace(/\s+/g,' ').trim();if(!text)return;const parts=text.split(/\s+VS\s+/i);if(parts.length!==2)return;if(el.dataset.polished===text)return;const [a,b]=parts;el.innerHTML=`<span class="schedule-team-label">TEAM A</span><span class="schedule-team-players">${escapeHtml(a.replace(/\s*TEAM A\s*/i,'').trim())}</span><span class="schedule-vs">VS</span><span class="schedule-team-label">TEAM B</span><span class="schedule-team-players">${escapeHtml(b.replace(/\s*TEAM B\s*/i,'').trim())}</span>`;el.dataset.polished=text})}
-function boot(){injectPolishStyles();fixSticky();fixSchedule();const obs=new MutationObserver(()=>{fixSticky();fixSchedule()});obs.observe(document.body,{subtree:true,childList:true,characterData:true});}
+function boot(){injectPolishStyles();fixSticky();fixSchedule();
+// Safe observer: schedule writes are idempotent via data-polished, and sticky updates converge after the first transformation.
+const obs=new MutationObserver(()=>{fixSticky();fixSchedule()});obs.observe(document.body,{subtree:true,childList:true,characterData:true});}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
