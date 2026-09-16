@@ -15,4 +15,4 @@ jobs:
           node-version: 22
       - run: npm install
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test tests/generation-freeze.spec.js
+      - run: npm test
