@@ -17,10 +17,20 @@
 .modal-input{width:100%;margin:8px 0 14px;min-height:44px}.modal-textarea{display:block;resize:vertical;min-height:150px;padding:12px;line-height:1.45}.modal-input[aria-invalid="true"],.modal-input.is-invalid{border-color:var(--danger)}
 .player-modal-actions{display:flex;gap:9px;justify-content:flex-end}.player-modal-actions .btn{min-width:110px;min-height:44px}
 
+/* Global overlay used by the existing player/reset sheet. Keep it outside document flow. */
+.sheet{position:fixed;inset:0;z-index:1000;width:100vw;height:100dvh;display:grid;place-items:center;padding:20px;overflow:auto;overscroll-behavior:contain}
+.sheet[hidden]{display:none!important}
+.sheet-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:0;cursor:pointer}
+.sheet-panel{position:relative;z-index:1;width:min(520px,calc(100vw - 40px));max-height:min(720px,calc(100dvh - 40px));overflow:auto;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);padding:22px}
+.sheet-close{position:absolute;top:10px;right:10px;z-index:2;width:44px;height:44px;display:grid;place-items:center;padding:0;border:1px solid var(--line);border-radius:50%;background:var(--surface-2);color:var(--text);font:800 24px/1 var(--ui);cursor:pointer}
+.sheet-close:hover{background:var(--accent-surface);border-color:var(--accent-border);color:var(--accent-soft)}
+.sheet-title{padding-right:52px;margin:0 0 7px;font:900 24px/1.1 var(--display);letter-spacing:-.02em}.sheet-panel .hint{margin:0 0 8px}.sheet-panel .modal-input{margin-top:8px}
+
 @media(max-width:700px){
   #setupView .grid-setup{gap:var(--section-gap);margin-bottom:var(--section-gap)}
   .player-ui-actions{gap:8px;margin-top:11px;margin-bottom:14px}.player-ui-actions .btn{flex:1 1 145px;min-height:44px}
   .player-ui-col{padding:13px}.player-ui-col-head{padding:0 2px;gap:8px;margin-bottom:11px}.player-ui-col-head .hint{font-size:10px}
   .player-list{gap:8px}.player-list-head,.player-row{grid-template-columns:minmax(0,1fr) minmax(115px,1fr) 44px;gap:8px}.player-list-head{padding-inline:7px}.player-row{min-height:50px;padding-inline:7px}.player-row select{min-height:40px}.player-remove{height:44px;width:44px}
   .generate-card .two{row-gap:12px}.player-modal-actions{gap:8px}.player-modal-actions .btn{flex:1;min-width:0}.generate-card{margin-top:0}
+  .sheet{padding:12px}.sheet-panel{width:min(520px,calc(100vw - 24px));max-height:calc(100dvh - 24px);padding:20px 16px 16px;border-radius:16px}.sheet-close{top:8px;right:8px}.sheet-title{font-size:22px}.sheet-panel .modal-input{min-height:48px;font-size:16px}.player-modal-actions{position:sticky;bottom:0;padding-top:8px;background:linear-gradient(to bottom,transparent,var(--surface) 10px,var(--surface));}
 }
