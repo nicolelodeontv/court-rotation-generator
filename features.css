@@ -16,6 +16,9 @@
 .generate-card{grid-column:1/-1;margin-top:0}.generate-card .two{margin-bottom:16px;row-gap:14px}.generate-card .two label{display:flex;flex-direction:column;gap:7px}.generate-card .two input,.generate-card .two select{margin-top:0}
 .modal-input{width:100%;margin:8px 0 14px;min-height:44px}.modal-textarea{display:block;resize:vertical;min-height:150px;padding:12px;line-height:1.45}.modal-input[aria-invalid="true"],.modal-input.is-invalid{border-color:var(--danger)}
 .player-modal-actions{display:flex;gap:9px;justify-content:flex-end}.player-modal-actions .btn{min-width:110px;min-height:44px}
+.confirm-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;margin-top:16px}.confirm-actions .btn{min-width:110px;min-height:44px}.confirm-actions .modal-confirm{background:var(--danger);border-color:var(--danger);color:#fff}.confirm-actions .modal-confirm:hover{background:var(--danger-soft);border-color:var(--danger-soft);color:#fff}
+.schedule-team-label{display:block;margin:.15em 0 .28em;font:900 13px/1 var(--display);letter-spacing:.08em;color:var(--accent-soft)}.schedule-team-players{display:block;font-weight:900}.schedule-vs{display:block;margin:.7em 0;font:950 15px/1 var(--ui);letter-spacing:.16em;color:var(--muted);text-align:center}
+#scheduleView #scheduleList{margin-bottom:var(--section-gap)}
 
 /* Global overlay used by the existing player/reset sheet. Keep it outside document flow. */
 .sheet{position:fixed;inset:0;z-index:1000;width:100vw;height:100dvh;display:grid;place-items:center;padding:20px;overflow:auto;overscroll-behavior:contain}
@@ -33,4 +36,5 @@
   .player-list{gap:8px}.player-list-head,.player-row{grid-template-columns:minmax(0,1fr) minmax(115px,1fr) 44px;gap:8px}.player-list-head{padding-inline:7px}.player-row{min-height:50px;padding-inline:7px}.player-row select{min-height:40px}.player-remove{height:44px;width:44px}
   .generate-card .two{row-gap:12px}.player-modal-actions{gap:8px}.player-modal-actions .btn{flex:1;min-width:0}.generate-card{margin-top:0}
   .sheet{padding:12px}.sheet-panel{width:min(520px,calc(100vw - 24px));max-height:calc(100dvh - 24px);padding:20px 16px 16px;border-radius:16px}.sheet-close{top:8px;right:8px}.sheet-title{font-size:22px}.sheet-panel .modal-input{min-height:48px;font-size:16px}.player-modal-actions{position:sticky;bottom:0;padding-top:8px;background:linear-gradient(to bottom,transparent,var(--surface) 10px,var(--surface));}
+  .schedule-team-label{font-size:12px}.schedule-vs{font-size:14px;margin:.65em 0}.confirm-actions{gap:8px}.confirm-actions .btn{flex:1;min-width:0}
 }
