@@ -2,6 +2,16 @@ const { test, expect } = require('@playwright/test');
 
 const roster = Array.from({ length: 24 }, (_, i) => `Player ${i + 1}`).join('\n');
 
+async function logStatusNodes(page, label) {
+  await page.evaluate((prefix) => {
+    const nodes = [...document.querySelectorAll('#setupStatus')];
+    console.info(`[CRG-TRACE] ${prefix}: setupStatus count=${nodes.length}`);
+    nodes.forEach((node, index) => {
+      console.info(`[CRG-TRACE] ${prefix}: node[${index}] text=${JSON.stringify(node.textContent)} connected=${node.isConnected}`);
+    });
+  }, label);
+}
+
 test('page remains interactive after load and rotation generation', async ({ page }) => {
   const trace = [];
   page.on('console', message => {
@@ -14,6 +24,7 @@ test('page remains interactive after load and rotation generation', async ({ pag
 
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
+  await logStatusNodes(page, 'LOAD');
 
   await page.waitForTimeout(2500);
 
@@ -32,6 +43,7 @@ test('page remains interactive after load and rotation generation', async ({ pag
   await page.locator('#playerConfirm').click({ timeout: 1000 });
 
   await expect(page.locator('#playerList .player-row')).toHaveCount(24, { timeout: 2000 });
+  await logStatusNodes(page, 'BEFORE-GENERATE');
 
   await page.evaluate(() => {
     window.__crgTrace = [];
@@ -93,10 +105,13 @@ test('page remains interactive after load and rotation generation', async ({ pag
   try {
     await expect(page.locator('#setupStatus')).toContainText('Rotation ready', { timeout: 5000 });
   } catch (error) {
+    await logStatusNodes(page, 'ASSERTION-FAIL');
     console.log('[CRG-TRACE] ===== FINAL STREAMED TRACE =====');
     for (const message of trace) console.log(message);
     throw error;
   }
+
+  await logStatusNodes(page, 'AFTER-GENERATE');
 
   await page.evaluate(() => {
     window.__crgPostGenerateClicks = 0;
