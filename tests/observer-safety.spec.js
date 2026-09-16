@@ -13,6 +13,10 @@ test('observer architecture has explicit safety annotations', () => {
   expect(liveDisplay, 'live-display.js should expose its explicit render hook').toMatch(/CRG_RENDER_LIVE_DISPLAY/);
   expect(liveDisplay, 'live-display.js should document the observer-free render-hook safety').toMatch(/Safe render hook:/);
 
+  const uiPolish = fs.readFileSync(path.join(projectRoot, 'ui-polish.js'), 'utf8');
+  expect(uiPolish, 'ui-polish.js should use a stable polished flag').toMatch(/dataset\.polished==='true'/);
+  expect(uiPolish, 'ui-polish.js should scope its observer away from document.body').not.toMatch(/obs\.observe\(document\.body/);
+
   for (const file of observerFiles) {
     const source = fs.readFileSync(path.join(projectRoot, file), 'utf8');
     const matches = [...source.matchAll(/new MutationObserver\(/g)];
