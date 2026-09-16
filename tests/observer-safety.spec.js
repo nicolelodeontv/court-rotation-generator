@@ -17,6 +17,12 @@ test('observer architecture has explicit safety annotations', () => {
   expect(uiPolish, 'ui-polish.js should use a stable polished flag').toMatch(/dataset\.polished==='true'/);
   expect(uiPolish, 'ui-polish.js should scope its observer away from document.body').not.toMatch(/obs\.observe\(document\.body/);
 
+  const sessionTools = fs.readFileSync(path.join(projectRoot, 'session-tools-fix.js'), 'utf8');
+  expect(sessionTools, 'session-tools-fix.js should document observer safety').toMatch(/Safe observer:/);
+  expect(sessionTools, 'session-tools-fix.js cleanup should guard its hint text write').toMatch(/hint\.textContent!==text/);
+  expect(sessionTools, 'session-tools-fix.js observer should not watch arbitrary attributes').not.toMatch(/attributes:true/);
+  expect(sessionTools, 'session-tools-fix.js monitorButtons should remain idempotent').toMatch(/data-runtimeMonitored/);
+
   for (const file of observerFiles) {
     const source = fs.readFileSync(path.join(projectRoot, file), 'utf8');
     const matches = [...source.matchAll(/new MutationObserver\(/g)];
