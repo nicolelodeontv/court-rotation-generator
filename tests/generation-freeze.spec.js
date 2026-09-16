@@ -18,7 +18,11 @@ test('page remains interactive after load and rotation generation', async ({ pag
   await page.locator('#themeBtn').click({ timeout: 1000 });
   await expect.poll(() => page.evaluate(() => window.__crgSmokeClicks)).toBe(1);
 
-  await page.locator('#names').fill(roster);
+  await page.locator('#playerPasteBtn').click({ timeout: 1000 });
+  await page.locator('#pastePlayerNames').fill(roster, { timeout: 1000 });
+  await page.locator('#playerConfirm').click({ timeout: 1000 });
+
+  await expect(page.locator('#playerList .player-row')).toHaveCount(24, { timeout: 2000 });
   await page.locator('#generateBtn').click({ timeout: 1000 });
   await expect(page.locator('#setupStatus')).toContainText('Rotation ready', { timeout: 5000 });
 
