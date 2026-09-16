@@ -53,7 +53,7 @@ function cleanup(){
  let hint=$('sessionToolsHint');
  const stack=document.querySelector('#moreView .card .tool-stack');
  if(stack&&!hint){hint=document.createElement('p');hint.id='sessionToolsHint';hint.className='hint';stack.after(hint)}
- if(hint)hint.textContent='Live spectator link is in Live. Frozen snapshots work without a database connection.';
+ if(hint){const text='Live spectator link is in Live. Frozen snapshots work without a database connection.';if(hint.textContent!==text)hint.textContent=text}
  monitorButtons();
 }
 window.addEventListener('error',event=>{if(!lastAction||Date.now()-lastActionAt>5000)return;showFailure(lastAction.label,event.error||event.message,lastAction.button)},{capture:true});
