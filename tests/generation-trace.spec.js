@@ -5,6 +5,12 @@ test('trace generation boundary and render completion', async ({ page }) => {
   const failedScripts = [];
   page.on('console', msg => messages.push(msg.text()));
   page.on('pageerror', error => messages.push(`PAGEERROR:${error.message}`));
+  page.on('dialog', async dialog => {
+    const entry = `DIALOG: type=${dialog.type()} message=${JSON.stringify(dialog.message())}`;
+    messages.push(entry);
+    console.log(`[CRG-TRACE] ${entry}`);
+    await dialog.dismiss();
+  });
   page.on('response', response => {
     if (!response.ok() && /\.js(?:\?|$)/.test(response.url())) {
       const entry = `SCRIPT LOAD FAILED: ${response.status()} ${response.url()}`;
