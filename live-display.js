@@ -1,5 +1,4 @@
-(()=>{'use strict';
-const teams=document.getElementById('currentTeams'),names=document.getElementById('names');
+(()=>{'use strict';const teams=document.getElementById('currentTeams'),names=document.getElementById('names');
 if(!teams||!names)return;
 const esc=v=>String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
 const clean=v=>String(v||'').trim();
@@ -19,6 +18,7 @@ function render(){
   teams.innerHTML=`<div class="team">${formatTeam(teamA,map)}</div><div class="versus">VS</div><div class="team">${formatTeam(teamB,map)}</div>`;
 }
 let lastPlain='';
+// Safe observer: only rewrites unformatted team markup and converges after one pass via lastPlain + live-team-block.
 new MutationObserver(()=>{const hasRendered=!!teams.querySelector('.live-team-block');const text=teams.textContent.replace(/\s+/g,' ').trim();if(hasRendered&&!/\sVS\s/i.test(text))return;if(text!==lastPlain){lastPlain=text;render()}}).observe(teams,{childList:true,subtree:true,characterData:true});
 render();
 })();
