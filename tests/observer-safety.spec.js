@@ -21,7 +21,8 @@ test('observer architecture has explicit safety annotations', () => {
   expect(sessionTools, 'session-tools-fix.js should document observer safety').toMatch(/Safe observer:/);
   expect(sessionTools, 'session-tools-fix.js cleanup should guard its hint text write').toMatch(/hint\.textContent!==text/);
   expect(sessionTools, 'session-tools-fix.js observer should not watch arbitrary attributes').not.toMatch(/attributes:true/);
-  expect(sessionTools, 'session-tools-fix.js monitorButtons should remain idempotent').toMatch(/data-runtimeMonitored/);
+  expect('data-runtime-monitored', 'dataset.runtimeMonitored maps to the kebab-case HTML attribute name').toBe('data-runtime-monitored');
+  expect(sessionTools, 'session-tools-fix.js monitorButtons should use the runtimeMonitored dataset guard').toMatch(/dataset\.runtimeMonitored/);
 
   for (const file of observerFiles) {
     const source = fs.readFileSync(path.join(projectRoot, file), 'utf8');
