@@ -20,9 +20,8 @@ test('trace generation boundary and render completion', async ({ page }) => {
     }
   });
 
-  await page.goto('/');
-  await page.waitForLoadState('domcontentloaded');
-
+  // Enable CDP debugging before navigation so scriptParsed events from the
+  // initial document load are captured. Keep the listener active through the hang.
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Debugger.enable');
   cdp.on('Debugger.scriptParsed', event => {
@@ -35,7 +34,9 @@ test('trace generation boundary and render completion', async ({ page }) => {
     });
   });
 
-  await page.evaluate(() => 0);
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+
   await page.locator('#playerPasteBtn').click();
   await page.locator('#pastePlayerNames').fill(Array.from({ length: 24 }, (_, i) => `Player ${i + 1}`).join('\n'));
   await page.locator('#playerConfirm').click();
@@ -53,9 +54,12 @@ test('trace generation boundary and render completion', async ({ page }) => {
   });
 
   const pausedFrames = [];
-  let paused = false;
+  let pauseHandled = false;
+  let pauseResolve;
+  const pausePromise = new Promise(resolve => { pauseResolve = resolve; });
   cdp.on('Debugger.paused', async event => {
-    paused = true;
+    if (pauseHandled) return;
+    pauseHandled = true;
     for (const frame of event.callFrames || []) {
       const scriptId = frame.location?.scriptId || '';
       let source = null;
@@ -74,15 +78,19 @@ test('trace generation boundary and render completion', async ({ page }) => {
       });
     }
     console.log(`[CRG-TRACE] CDP PAUSED reason=${event.reason} frames=${JSON.stringify(pausedFrames)}`);
+    // A previous diagnostic accidentally left Chromium paused, which made all
+    // subsequent page.evaluate() calls hang. Always resume after capturing source.
+    try { await cdp.send('Debugger.resume'); } catch {}
+    pauseResolve();
   });
 
   await page.locator('#generateBtn').click();
   await new Promise(resolve => setTimeout(resolve, 500));
-  if (!paused) {
+  if (!pauseHandled) {
     console.log('[CRG-TRACE] CDP pause requested after 500ms');
     await cdp.send('Debugger.pause');
   }
-  await page.waitForTimeout(3500);
+  await Promise.race([pausePromise, new Promise(resolve => setTimeout(resolve, 5000))]);
 
   console.log(`[CRG-TRACE] SCRIPT INVENTORY count=${parsedScripts.size}`);
   for (const script of parsedScripts.values()) {
