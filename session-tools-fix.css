@@ -22,6 +22,9 @@ body.modal-open{overflow:hidden}
 .complete-wins{font-weight:900!important}
 .complete-close{margin-top:var(--section-gap)!important}
 
+/* Runtime failure visibility for Session Tools handlers. */
+.session-tool-error{margin:6px 0 0;color:var(--danger-soft);font:800 11px/1.35 var(--ui)}
+
 @media(max-width:700px){
   .sheet.final-rankings .sheet-panel{padding:20px 16px 16px}
   .complete-rank-row{grid-template-columns:minmax(48px,58px) minmax(0,1fr);gap:8px;padding:10px}
