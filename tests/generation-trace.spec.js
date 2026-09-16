@@ -34,19 +34,41 @@ test('trace generation boundary and render completion', async ({ page }) => {
     }
   });
 
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Debugger.enable');
+  const pausedFrames = [];
+  let paused = false;
+  cdp.on('Debugger.paused', event => {
+    paused = true;
+    for (const frame of event.callFrames || []) {
+      pausedFrames.push({
+        functionName: frame.functionName || '(anonymous)',
+        url: frame.url || '',
+        lineNumber: frame.location?.lineNumber ?? -1,
+        columnNumber: frame.location?.columnNumber ?? -1,
+      });
+    }
+    console.log(`[CRG-TRACE] CDP PAUSED reason=${event.reason} stack=${JSON.stringify(pausedFrames)}`);
+  });
+
   await page.locator('#generateBtn').click();
+  await new Promise(resolve => setTimeout(resolve, 500));
+  if (!paused) {
+    console.log('[CRG-TRACE] CDP pause requested after 500ms');
+    await cdp.send('Debugger.pause');
+  }
   await page.waitForTimeout(3500);
 
   console.log('[CRG-TRACE] trivial evaluate:before');
   const trivial = await page.evaluate(() => 1 + 1);
   console.log(`[CRG-TRACE] trivial evaluate:after=${trivial}`);
 
-  const diagnostics = await page.evaluate(() => ({
+  const diagnostics = await page.evaluate(async () => ({
     status: document.querySelector('#setupStatus')?.textContent || '',
     games: document.querySelectorAll('#scheduleList .game-row').length,
     currentTeams: document.querySelector('#currentTeams')?.textContent || '',
     serviceWorkers: navigator.serviceWorker ? navigator.serviceWorker.controller ? 'controlled' : 'uncontrolled' : 'unsupported',
-    registrations: navigator.serviceWorker ? navigator.serviceWorker.getRegistrations().then(rs => rs.map(r => r.scope)) : Promise.resolve([]),
+    registrations: navigator.serviceWorker ? (await navigator.serviceWorker.getRegistrations()).map(r => r.scope) : [],
   }));
 
   console.log(`TRACE diagnostics=${JSON.stringify(diagnostics)}`);
