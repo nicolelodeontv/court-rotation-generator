@@ -1,0 +1,1 @@
+window.CRG_SUPABASE_CONFIG={url:'https://gxfgkyiewyjcoifymyba.supabase.co',publishableKey:''};
