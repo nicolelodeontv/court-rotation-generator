@@ -4,10 +4,13 @@ const roster = Array.from({ length: 24 }, (_, i) => `Player ${i + 1}`).join('\n'
 
 test('page remains interactive after load and rotation generation', async ({ page }) => {
   const trace = [];
-  const addTrace = message => {
-    trace.push(message);
-    console.log(`[CRG-TRACE] ${message}`);
-  };
+  page.on('console', message => {
+    const text = message.text();
+    if (!text.startsWith('[CRG-TRACE]')) return;
+    trace.push(text);
+    console.log(text);
+  });
+  page.on('pageerror', error => console.log(`[CRG-TRACE] PAGEERROR: ${error.message}`));
 
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
@@ -37,24 +40,29 @@ test('page remains interactive after load and rotation generation', async ({ pag
       console.info(`[CRG-TRACE] ${message}`);
     };
 
+    document.addEventListener('click', event => {
+      if (event.target?.closest?.('#generateBtn')) push('A0: Generate button click reached document capture');
+    }, true);
+
     const button = document.querySelector('#generateBtn');
-    button?.addEventListener('click', () => push('A: Generate rotation click handler reached'), true);
+    button?.addEventListener('click', () => push('A1: Generate button click reached target capture'), true);
+    button?.addEventListener('click', () => push('A2: Generate button target handler phase reached'), false);
 
     if (window.RotationScheduler?.generate) {
       const originalGenerate = window.RotationScheduler.generate;
       window.RotationScheduler.generate = function tracedSchedulerGenerate(...args) {
-        push('B: Scheduler generate() entered');
+        push('B1: Scheduler generate() entered');
         try {
           const result = originalGenerate.apply(this, args);
-          push(`B: Scheduler generate() returned games=${result?.games?.length ?? 'none'} score=${result?.score ?? 'none'}`);
+          push(`B2: Scheduler generate() returned games=${result?.games?.length ?? 'none'} score=${result?.score ?? 'none'}`);
           return result;
         } catch (error) {
-          push(`B: Scheduler generate() threw ${error?.message || error}`);
+          push(`B2: Scheduler generate() threw ${error?.message || error}`);
           throw error;
         }
       };
     } else {
-      push('B: Scheduler generate() wrapper could not attach — RotationScheduler.generate missing');
+      push('B0: Scheduler generate() wrapper could not attach — RotationScheduler.generate missing');
     }
 
     if (window.CRG_RENDER_LIVE_DISPLAY) {
@@ -64,7 +72,7 @@ test('page remains interactive after load and rotation generation', async ({ pag
         return originalRender.apply(this, args);
       };
     } else {
-      push('C: Explicit CRG_RENDER_LIVE_DISPLAY hook missing before generation');
+      push('C0: Explicit CRG_RENDER_LIVE_DISPLAY hook missing before generation');
     }
 
     const status = document.querySelector('#setupStatus');
@@ -73,27 +81,21 @@ test('page remains interactive after load and rotation generation', async ({ pag
         push(`D: #setupStatus updated to "${status.textContent}"`);
       });
       observer.observe(status, { childList: true, characterData: true, subtree: true });
-      push(`D: Status observer attached; current text="${status.textContent}"`);
+      push(`D0: Status observer attached; current text="${status.textContent}"`);
     } else {
-      push('D: #setupStatus element missing');
+      push('D0: #setupStatus element missing');
     }
   });
 
-  addTrace('TEST: About to click #generateBtn');
+  console.log('[CRG-TRACE] TEST: About to click #generateBtn');
   await page.locator('#generateBtn').click({ timeout: 1000 });
 
   try {
     await expect(page.locator('#setupStatus')).toContainText('Rotation ready', { timeout: 5000 });
   } catch (error) {
-    const browserTrace = await page.evaluate(() => window.__crgTrace || []);
-    console.log('[CRG-TRACE] ===== FINAL TRACE =====');
-    for (const message of browserTrace) console.log(`[CRG-TRACE] ${message}`);
+    console.log('[CRG-TRACE] ===== FINAL STREAMED TRACE =====');
+    for (const message of trace) console.log(message);
     throw error;
-  }
-
-  const browserTrace = await page.evaluate(() => window.__crgTrace || []);
-  for (const message of browserTrace) {
-    if (!trace.includes(message)) console.log(`[CRG-TRACE] ${message}`);
   }
 
   await page.evaluate(() => {
