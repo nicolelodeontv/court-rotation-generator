@@ -2,8 +2,16 @@ const { test, expect } = require('@playwright/test');
 
 test('trace generation boundary and render completion', async ({ page }) => {
   const messages = [];
+  const failedScripts = [];
   page.on('console', msg => messages.push(msg.text()));
   page.on('pageerror', error => messages.push(`PAGEERROR:${error.message}`));
+  page.on('response', response => {
+    if (!response.ok() && /\.js(?:\?|$)/.test(response.url())) {
+      const entry = `SCRIPT LOAD FAILED: ${response.status()} ${response.url()}`;
+      failedScripts.push(entry);
+      console.log(`[CRG-TRACE] ${entry}`);
+    }
+  });
 
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
@@ -22,8 +30,6 @@ test('trace generation boundary and render completion', async ({ page }) => {
       return result;
     };
     for (const name of ['render', 'renderCurrent', 'renderStats', 'renderSchedule', 'renderPlayers', 'renderRankings', 'renderSummary']) {
-      // App functions are closure-local; this marker documents that the boundary test intentionally
-      // relies on scheduler start/end plus the DOM status transition to isolate the synchronous phase.
       void name;
     }
   });
@@ -31,13 +37,22 @@ test('trace generation boundary and render completion', async ({ page }) => {
   await page.locator('#generateBtn').click();
   await page.waitForTimeout(3500);
 
-  const state = await page.evaluate(() => ({
+  console.log('[CRG-TRACE] trivial evaluate:before');
+  const trivial = await page.evaluate(() => 1 + 1);
+  console.log(`[CRG-TRACE] trivial evaluate:after=${trivial}`);
+
+  const diagnostics = await page.evaluate(() => ({
     status: document.querySelector('#setupStatus')?.textContent || '',
     games: document.querySelectorAll('#scheduleList .game-row').length,
     currentTeams: document.querySelector('#currentTeams')?.textContent || '',
+    serviceWorkers: navigator.serviceWorker ? navigator.serviceWorker.controller ? 'controlled' : 'uncontrolled' : 'unsupported',
+    registrations: navigator.serviceWorker ? navigator.serviceWorker.getRegistrations().then(rs => rs.map(r => r.scope)) : Promise.resolve([]),
   }));
 
-  console.log(`TRACE final status=${state.status} scheduleRows=${state.games} currentTeams=${state.currentTeams}`);
+  console.log(`TRACE diagnostics=${JSON.stringify(diagnostics)}`);
+  console.log(`TRACE failedScripts=${JSON.stringify(failedScripts)}`);
   console.log(`TRACE messages=${JSON.stringify(messages)}`);
-  expect(state.status, `generation trace: ${JSON.stringify({ state, messages })}`).toContain('Rotation ready');
+  expect(failedScripts, 'generation trace: no failed JavaScript responses expected').toEqual([]);
+  expect(trivial).toBe(2);
+  expect(diagnostics.status).toContain('Rotation ready');
 });
