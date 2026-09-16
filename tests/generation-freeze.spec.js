@@ -21,6 +21,10 @@ test('page remains interactive after load and rotation generation', async ({ pag
     console.log(text);
   });
   page.on('pageerror', error => console.log(`[CRG-TRACE] PAGEERROR: ${error.message}`));
+  page.on('dialog', async dialog => {
+    console.log(`[CRG-TRACE] DIALOG: type=${dialog.type()} message=${JSON.stringify(dialog.message())}`);
+    await dialog.dismiss();
+  });
 
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
