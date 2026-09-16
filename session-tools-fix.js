@@ -52,13 +52,15 @@ function cleanup(){
  const share=$('shareSessionBtn');if(share)share.textContent='Share session schedule';
  let hint=$('sessionToolsHint');
  const stack=document.querySelector('#moreView .card .tool-stack');
- if(stack&&!hint){hint=document.createElement('p');hint.id='sessionToolsHint';stack.after(hint)}
+ if(stack&&!hint){hint=document.createElement('p');hint.id='sessionToolsHint';hint.className='hint';stack.after(hint)}
  if(hint){const text='Live spectator link is in Live. Frozen snapshots work without a database connection.';if(hint.textContent!==text)hint.textContent=text}
  monitorButtons();
 }
 window.addEventListener('error',event=>{if(!lastAction||Date.now()-lastActionAt>5000)return;showFailure(lastAction.label,event.error||event.message,lastAction.button)},{capture:true});
 window.addEventListener('unhandledrejection',event=>{if(!lastAction||Date.now()-lastActionAt>5000)return;showFailure(lastAction.label,event.reason,lastAction.button)},{capture:true});
 document.addEventListener('click',captureAction,true);
-function boot(){cleanup();const root=$('moreView');if(!root)return;new MutationObserver(cleanup).observe(root,{subtree:true,childList:true,attributes:true,attributeFilter:['disabled','id','class']})}
+function boot(){cleanup();const root=$('moreView');if(!root)return;
+// Safe observer: scoped to #moreView and cleanup writes sessionToolsHint idempotently, so it cannot observe and repeat its own write forever.
+new MutationObserver(cleanup).observe(root,{subtree:true,childList:true,attributes:true,attributeFilter:['disabled','id','class']})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
