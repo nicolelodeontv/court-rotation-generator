@@ -7,7 +7,8 @@ function fixSchedule(){document.querySelectorAll('.game-match').forEach(el=>{if(
 function boot(){injectPolishStyles();fixSticky();fixSchedule();
 const container=document.querySelector('#scheduleList')||document.querySelector('.schedule-list')||document.querySelector('#schedule');
 if(!container)return;
-const obs=new MutationObserver(()=>{fixSticky();fixSchedule()});
+// Safe observer: scoped to the schedule container and guarded by a stable polished flag.
+const obs=new MutationObserver(()=>{fixSchedule()});
 obs.observe(container,{subtree:true,childList:true,characterData:true});}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
