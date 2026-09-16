@@ -117,6 +117,9 @@ test('page remains interactive after load and rotation generation', async ({ pag
 
   await logStatusNodes(page, 'AFTER-GENERATE');
 
+  const gameCount = await page.locator('.game-match').count();
+  expect(gameCount, 'generation should create the full multi-game schedule').toBeGreaterThanOrEqual(36);
+
   await page.evaluate(() => {
     window.__crgPostGenerateClicks = 0;
     document.querySelector('[data-view="liveView"]')?.addEventListener('click', () => {
