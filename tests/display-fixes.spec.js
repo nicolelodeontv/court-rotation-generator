@@ -50,7 +50,8 @@ async function assertLiveFormatting(page, totalGames) {
 
 async function getSnapshotUrl(page) {
   await page.locator('[data-view="moreView"]').click();
-  await page.locator('#snapshotLinkBtn').click();
+  await expect(page.locator('#copyFrozenSnapshotBtn')).toBeVisible();
+  await page.locator('#copyFrozenSnapshotBtn').click();
   await expect.poll(() => page.evaluate(() => window.__crgCopiedText || '')).toContain('?s=');
   return page.evaluate(() => window.__crgCopiedText);
 }
