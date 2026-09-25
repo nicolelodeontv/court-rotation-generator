@@ -36,14 +36,14 @@ async function assertLiveFormatting(page, totalGames) {
   await expect(page.locator('#stickyGame')).not.toContainText(`${totalGames}Player`);
   await expect(page.locator('#stickyMatch')).toBeHidden();
 
-  const skills = page.locator('#upNextList .live-player-skill');
+  const skills = page.locator('#upNextList .live-player-stars');
   const players = page.locator('#upNextList .live-player-name');
   expect(await players.count(), 'Up Next should render player-name elements').toBeGreaterThan(0);
-  expect(await skills.count(), 'Up Next should render skill elements').toBeGreaterThan(0);
+  expect(await skills.count(), 'Up Next should render star skill elements').toBeGreaterThan(0);
   const skillTexts = await skills.allTextContents();
-  expect(skillTexts.every(text => /^\s*·\s*(BEGINNER|INTERMEDIATE|ADVANCED)\s*$/i.test(text))).toBeTruthy();
+  expect(skillTexts.every(text => /^\s*⭐{1,6}\s*$/.test(text))).toBeTruthy();
   const compactUpNext = (await page.locator('#upNextList').innerText()).replace(/\s+/g, ' ');
-  expect(compactUpNext).not.toMatch(/[A-Za-z][A-Za-z]+(?:BEGINNER|INTERMEDIATE|ADVANCED)/i);
+  expect(compactUpNext).not.toMatch(/[A-Za-z][A-Za-z]+⭐/);
 
   return (await page.locator('#currentTeams .live-player-name').allTextContents()).map(s => s.trim());
 }
@@ -95,4 +95,52 @@ test('15-game live formatting and spectator current card stay correct', async ({
 
   const snapshotUrl = await getSnapshotUrl(page);
   await assertSpectatorCurrentCard(browser, snapshotUrl, currentNames, 'spectator-current-15-games.png');
+});
+
+
+test('Up Next swaps work in both directions and clear selection', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+  await page.locator('#playerPasteBtn').click();
+  await page.locator('#pastePlayerNames').fill(roster(8));
+  await page.locator('#playerConfirm').click();
+  await page.locator('#generateBtn').click();
+  await expect(page.locator('.game-match')).toHaveCount(12, { timeout: 5000 });
+  for (let i = 0; i < 9; i++) await page.locator('#nextBtn').click();
+  expect(await page.locator('#upNextList [data-swap-game]').evaluateAll(btns => btns.map(b => Number(b.dataset.swapGame)))).toEqual([10, 11, 12]);
+  const rows = page.locator('#upNextList .next-item');
+  const before = await rows.evaluateAll(items => items.map(item => item.querySelectorAll('span')[1]?.innerText || ''));
+  let pair = null;
+  for (const [a, b] of [[10, 11], [10, 12], [11, 12]]) {
+    await page.locator('[data-swap-game="'+a+'"]').click();
+    await expect(page.locator('[data-swap-game="'+a+'"]')).toHaveText(/Swap selected/);
+    await page.locator('[data-swap-game="'+b+'"]').click();
+    if (await page.locator('#upNextSwapStatus').textContent().then(t => /Swapped Game/.test(t))) { pair = [a, b]; break; }
+  }
+  expect(pair, 'At least one upcoming pair should be swappable').not.toBeNull();
+  const after = await rows.evaluateAll(items => items.map(item => item.querySelectorAll('span')[1]?.innerText || ''));
+  expect(after).not.toEqual(before);
+  expect(await page.locator('.upnext-swap.is-selected').count()).toBe(0);
+  const [a, b] = pair;
+  await page.locator('[data-swap-game="'+b+'"]').click();
+  await expect(page.locator('[data-swap-game="'+b+'"]')).toHaveText(/Swap selected/);
+  await page.locator('[data-swap-game="'+a+'"]').click();
+  await expect(page.locator('#upNextSwapStatus')).toContainText('Swapped Game');
+  expect(await rows.evaluateAll(items => items.map(item => item.querySelectorAll('span')[1]?.innerText || ''))).toEqual(before);
+  expect(await page.locator('.upnext-swap.is-selected').count()).toBe(0);
+});
+
+test('Ranks tab uses the shared medal placement labels', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+  await page.locator('#playerPasteBtn').click();
+  await page.locator('#pastePlayerNames').fill(roster(4));
+  await page.locator('#playerConfirm').click();
+  await page.locator('#generateBtn').click();
+  await page.locator('#completeBtn').click();
+  await page.locator('[data-winner="0"]').click();
+  await page.locator('[data-view="rankingsView"]').click();
+  await expect(page.locator('.rank-row').first()).toBeVisible();
+  const labels = await page.locator('.rank-pos').allTextContents();
+  expect(labels.slice(0, 3)).toEqual(['🏆🥇 1st', '🥈 2nd', '🥉 3rd']);
 });
