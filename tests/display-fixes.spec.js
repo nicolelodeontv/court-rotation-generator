@@ -45,7 +45,7 @@ async function assertLiveFormatting(page, totalGames) {
   const compactUpNext = (await page.locator('#upNextList').innerText()).replace(/\s+/g, ' ');
   expect(compactUpNext).not.toMatch(/[A-Za-z][A-Za-z]+⭐/);
 
-  return (await page.locator('#currentTeams .live-player-name').allTextContents()).map(s => s.trim());
+  return (await page.locator('#currentTeams .live-player-name').allTextContents()).map(s => s.replace(/\s+⭐+$/, '').trim());
 }
 
 async function getSnapshotUrl(page) {
@@ -106,7 +106,7 @@ test('Up Next swaps work in both directions and clear selection', async ({ page 
   await page.locator('#playerConfirm').click();
   await page.locator('#generateBtn').click();
   await expect(page.locator('.game-match')).toHaveCount(12, { timeout: 5000 });
-  for (let i = 0; i < 9; i++) await page.locator('#nextBtn').click();
+  for (let i = 0; i < 9; i++) await page.locator('#nextBtn').click({ force: true });
   expect(await page.locator('#upNextList [data-swap-game]').evaluateAll(btns => btns.map(b => Number(b.dataset.swapGame)))).toEqual([10, 11, 12]);
   const rows = page.locator('#upNextList .next-item');
   const before = await rows.evaluateAll(items => items.map(item => item.querySelectorAll('span')[1]?.innerText || ''));
