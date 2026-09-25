@@ -45,3 +45,42 @@ body.court-mode .quick .btn.full{margin:0}
 @media(max-width:700px){body.court-mode{padding:6px}body.court-mode #liveView>.section-top{height:40px;margin-bottom:5px}body.court-mode #liveView>.section-top>.row{gap:6px}body.court-mode #liveView>.section-top>.row>button{min-height:38px;padding:7px 10px;font-size:11px}body.court-mode .live-card{padding:10px;gap:7px;border-radius:16px}body.court-mode .game-no{font-size:clamp(31px,8vw,52px)}body.court-mode .matchup{gap:6px}body.court-mode .team{padding:7px;border-radius:13px}body.court-mode .live-player-name{font-size:clamp(19px,7vw,36px)}body.court-mode .live-player-skill{font-size:clamp(8px,2.4vw,11px)}body.court-mode .live-plus{font-size:18px}body.court-mode .versus{font-size:11px}body.court-mode .quick{gap:6px}body.court-mode .quick .btn{min-height:44px;font-size:12px;padding:7px 8px;border-radius:11px}}
 @media(max-height:600px){body.court-mode{padding:5px}body.court-mode #liveView>.section-top{height:36px;margin-bottom:4px}body.court-mode #liveView>.section-top>.row>button{min-height:34px;padding:5px 8px;font-size:10px}body.court-mode .live-card{padding:8px;gap:5px;border-radius:13px}body.court-mode .live-meta{font-size:9px}body.court-mode .badge{padding:5px 8px;font-size:8px}body.court-mode #currentCourt{font-size:15px}body.court-mode .game-no{font-size:clamp(28px,7vw,48px)}body.court-mode .live-player-name{font-size:clamp(17px,4.8vw,31px)}body.court-mode .live-player-skill{font-size:8px;margin-top:2px}body.court-mode .live-plus{font-size:15px}body.court-mode .quick .btn{min-height:40px;font-size:11px;padding:6px 7px}}
 @media(max-width:380px){body.court-mode .live-card{padding:7px}body.court-mode .live-player-name{font-size:clamp(16px,6.5vw,28px)}body.court-mode .live-player-skill{font-size:8px}body.court-mode .versus{font-size:10px}body.court-mode .quick .btn{font-size:10px}}
+
+
+/* Live match history: contained so a long session never pushes Up Next or other controls indefinitely. */
+.match-log{margin-top:var(--section-gap)}
+.match-log-list{display:grid;gap:10px;margin-top:11px;max-height:360px;overflow:auto;padding-right:3px;overscroll-behavior:contain}
+.match-log-entry{padding:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-lg)}
+.match-log-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px;font-size:11px;color:var(--muted)}
+.match-log-head b{font-size:13px;color:var(--accent-soft)}
+.match-log-matchup{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:10px;align-items:stretch}
+.match-log-team{min-width:0;padding:9px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface)}
+.match-log-team .live-team-block{gap:4px}
+.match-log-team .live-player{white-space:normal;text-align:center}
+.match-log-team .live-player-name{font-size:clamp(15px,2.6vw,22px);line-height:1.08}
+.match-log-team .live-player-skill{font-size:9px;margin-top:3px}
+.match-log-team .live-plus{font-size:16px;min-height:8px}
+.match-log-vs{align-self:center;font-size:10px;font-weight:950;color:var(--muted);white-space:nowrap}
+.match-log-result{margin-top:9px;font-size:11px;font-weight:900;color:var(--accent-soft);text-align:center}
+@media(max-width:700px){
+  .match-log-list{max-height:300px}
+  .match-log-entry{padding:10px}
+  .match-log-matchup{grid-template-columns:1fr;gap:7px}
+  .match-log-vs{padding:1px 0;text-align:center}
+  .match-log-team{padding:8px}
+}
+@media(max-width:380px){
+  .match-log-list{max-height:270px}
+  .match-log-team .live-player-name{font-size:16px}
+  .match-log-team .live-player-skill{font-size:8px}
+}
+@media(min-width:701px){
+  #liveView .live-share-row{width:100%;max-width:none;margin:8px auto 0;display:grid;grid-template-columns:1fr}
+  #liveView .live-share-row>.btn{width:100%;margin:0}
+}
+body.court-mode #liveView .live-share-row{width:100%;max-width:none;margin:6px auto 0;display:grid;grid-template-columns:1fr}
+body.court-mode #liveView .live-share-row>.btn{width:100%;margin:0}
+@media(max-width:700px){
+  body.court-mode #liveView .live-share-row{width:100%;margin:5px auto 0}
+  body.court-mode #liveView .live-share-row>.btn{width:100%}
+}
