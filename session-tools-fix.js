@@ -3,8 +3,8 @@ const toast=msg=>{let t=$('crgToast');if(!t){t=document.createElement('div');t.i
 const clean=v=>String(v??'').trim();
 const title=v=>String(v??'').trim().replace(/\s+/g,' ').replace(/(^|[\s'-])([a-zà-ÿ])/g,(_,p,c)=>p+c.toLocaleUpperCase());
 const storedSkills=()=>{try{return JSON.parse(localStorage.getItem('crg-skills-v1')||'{}')||{}}catch{return{}}};
-const skillMap=()=>{const names=($('names')?.value||'').split(/\r?\n/).map(clean).filter(Boolean).map(title),src=window.CRG_PLAYER_SKILLS||{},stored=storedSkills(),map={};names.forEach((n,i)=>map[n.toLocaleLowerCase()]=title(src[i+1]||stored[n]||'Intermediate'));return map};
-const skillFor=(name,map)=>title(map[clean(name).toLocaleLowerCase()]||'Intermediate');
+const skillMap=()=>{const names=($('names')?.value||'').split(/\r?\n/).map(clean).filter(Boolean).map(title),src=window.CRG_PLAYER_SKILLS||{},stored=storedSkills(),map={};names.forEach((n,i)=>map[n.toLocaleLowerCase()]=title(src[i+1]||stored[n]||'Beginner'));return map};
+const skillFor=(name,map)=>title(map[clean(name).toLocaleLowerCase()]||'Beginner');
 const buttonLabels={copyFrozenSnapshotBtn:'Copy frozen snapshot',snapshotLinkBtn:'Copy read-only snapshot',resumeBtn:'Resume last session',saveSessionBtn:'Save session',shareDisplayBtn:'Share display view',shareSessionBtn:'Share session schedule',restartBtn:'Restart live session',printBtn:'Print schedule',csvBtn:'Download CSV',copyLiveSpectatorBtn:'Copy live spectator link'};
 let lastAction=null,lastActionAt=0;
 function showFailure(label,error,button){const message='Something went wrong — check console';console.error(`[${label}] failed:`,error);const old=button?.parentElement?.querySelector(':scope > .session-tool-error');if(old)old.remove();if(button){const p=document.createElement('p');p.className='session-tool-error';p.textContent=message;p.setAttribute('role','alert');button.insertAdjacentElement('afterend',p);setTimeout(()=>p.remove(),5000)}toast(`${label} failed — check console`) }

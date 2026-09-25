@@ -9,8 +9,8 @@ const text=el=>el?.innerText?.trim()||'';
 const code=()=>($('sessionCodeText')?.textContent||'').match(/CRG-[A-Z0-9]+/)?.[0]||'';
 const valid=t=>Array.isArray(t)&&t.length===2&&t.every(team=>Array.isArray(team)&&team.length>=2&&team.every(p=>p&&clean(p.name)));
 const storedSkills=()=>{try{return JSON.parse(localStorage.getItem('crg-skills-v1')||'{}')||{}}catch{return{}}};
-const skillFor=(name,map)=>title(map[clean(name).toLocaleLowerCase()]||'Intermediate');
-const skillMap=()=>{const names=($('names')?.value||'').split(/\r?\n/).map(clean).filter(Boolean).map(title),src=window.CRG_PLAYER_SKILLS||{},stored=storedSkills(),map={};names.forEach((n,i)=>map[n.toLocaleLowerCase()]=title(src[i+1]||stored[n]||'Intermediate'));return map};
+const skillFor=(name,map)=>title(map[clean(name).toLocaleLowerCase()]||'Beginner');
+const skillMap=()=>{const names=($('names')?.value||'').split(/\r?\n/).map(clean).filter(Boolean).map(title),src=window.CRG_PLAYER_SKILLS||{},stored=storedSkills(),map={};names.forEach((n,i)=>map[n.toLocaleLowerCase()]=title(src[i+1]||stored[n]||'Beginner'));return map};
 function historyRead(c){try{return JSON.parse(localStorage.getItem(`${HISTORY_KEY}:${c}`)||'{}')||{}}catch{return{}}}
 function historyWrite(c,h){try{localStorage.setItem(`${HISTORY_KEY}:${c}`,JSON.stringify(h))}catch{}}
 function currentTeams(){const root=$('currentTeams'),map=skillMap();if(!root)return[[],[]];const blocks=[...root.querySelectorAll(':scope > .team')];if(blocks.length>=2){const out=blocks.slice(0,2).map(team=>[...team.querySelectorAll('.live-player')].map(p=>{const n=clean(p.querySelector('.live-player-name')?.textContent);return{name:n,skill:skillFor(n,map)}}).filter(p=>p.name));if(valid(out))return out}const raw=root.textContent.replace(/\s+/g,' ').trim(),parts=raw.split(/\s+VS\s+/i);if(parts.length!==2)return[[],[]];return parts.map(side=>side.split(/\s*\+\s*/).map(n=>({name:clean(n),skill:skillFor(n,map)})).filter(p=>p.name))}
