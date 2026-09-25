@@ -13,21 +13,21 @@ body.modal-open{overflow:hidden}
 .sheet.final-rankings .sheet-panel>.hint{margin-bottom:var(--section-gap)}
 .completion-rankings-wrap{width:100%;min-width:0}
 .complete-rankings{display:grid;gap:10px;width:100%}
-.complete-rank-row{display:grid;grid-template-columns:minmax(52px,64px) minmax(0,1fr) auto;gap:10px;align-items:center;min-width:0;padding:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-lg)}
+ .complete-rank-row{display:grid;grid-template-columns:max-content minmax(0,1fr) auto;gap:12px;align-items:center;min-width:0;padding:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-lg)}
 .complete-rank-row.first-place{background:var(--accent-surface);border-color:var(--accent-border)}
-.complete-place{font:950 17px/1.05 var(--display);color:var(--accent-soft);white-space:nowrap}
-.complete-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 17px/1.1 var(--display)}
+ .complete-place{display:inline-flex;align-items:center;min-width:0;font:950 17px/1.05 var(--font-headline);color:var(--accent-soft);white-space:nowrap}
+.complete-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 17px/1.1 var(--font-headline)}
 .complete-stats{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:7px;min-width:0}
-.complete-stats>span{display:inline-flex;align-items:center;justify-content:center;padding:5px 8px;border:1px solid var(--accent-border);border-radius:999px;background:var(--accent-surface);color:var(--accent-soft);font:800 10px/1 var(--ui);white-space:nowrap}
+.complete-stats>span{display:inline-flex;align-items:center;justify-content:center;padding:5px 8px;border:1px solid var(--accent-border);border-radius:999px;background:var(--accent-surface);color:var(--accent-soft);font:800 10px/1 var(--font-body);white-space:nowrap}
 .complete-wins{font-weight:900!important}
 .complete-close{margin-top:var(--section-gap)!important}
 
 /* Runtime failure visibility for Session Tools handlers. */
-.session-tool-error{margin:6px 0 0;color:var(--danger-soft);font:800 11px/1.35 var(--ui)}
+.session-tool-error{margin:6px 0 0;color:var(--danger-soft);font:800 11px/1.35 var(--font-body)}
 
 @media(max-width:700px){
   .sheet.final-rankings .sheet-panel{padding:20px 16px 16px}
-  .complete-rank-row{grid-template-columns:minmax(48px,58px) minmax(0,1fr);gap:8px;padding:10px}
+   .complete-rank-row{grid-template-columns:max-content minmax(0,1fr);gap:10px;padding:10px}
   .complete-stats{grid-column:1/-1;justify-content:flex-start}
   .complete-name{font-size:16px}
   .complete-place{font-size:16px}
