@@ -8,7 +8,7 @@ body.modal-open{overflow:hidden}
 .live-share-row+.upnext{margin-top:var(--section-gap)!important}
 
 /* Final rankings modal: use the same bordered-card language as Leaderboard. */
-.sheet.final-rankings .sheet-panel{padding:22px}
+ .sheet.final-rankings .sheet-panel{padding:22px;max-height:none;overflow:visible}
 .sheet.final-rankings .sheet-title{margin-bottom:4px}
 .sheet.final-rankings .sheet-panel>.hint{margin-bottom:var(--section-gap)}
 .completion-rankings-wrap{width:100%;min-width:0}
@@ -32,3 +32,6 @@ body.modal-open{overflow:hidden}
   .complete-name{font-size:16px}
   .complete-place{font-size:16px}
 }
+
+.complete-win-pct{font-weight:900!important}
+@media(max-width:700px){.sheet.final-rankings .sheet-panel{max-height:none;overflow:visible}}
