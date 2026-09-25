@@ -38,3 +38,15 @@
   .sheet{padding:12px}.sheet-panel{width:min(520px,calc(100vw - 24px));max-height:calc(100dvh - 24px);padding:20px 16px 16px;border-radius:16px}.sheet-close{top:8px;right:8px}.sheet-title{font-size:22px}.sheet-panel .modal-input{min-height:48px;font-size:16px}.player-modal-actions{position:sticky;bottom:0;padding-top:8px;background:linear-gradient(to bottom,transparent,var(--surface) 10px,var(--surface));}
   .schedule-team-label{font-size:12px}.schedule-vs{font-size:14px;margin:.65em 0}.confirm-actions{gap:8px}.confirm-actions .btn{flex:1;min-width:0}
 }
+
+
+/* More: keep Session and Summary side by side on tablet/desktop, with natural card heights. */
+#moreView .tools-grid{align-items:start}
+#moreView .summary-card{grid-column:auto}
+@media(min-width:701px){
+  #moreView .tools-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:700px){
+  #moreView .tools-grid{grid-template-columns:1fr}
+  #moreView .summary-card{grid-column:auto}
+}
