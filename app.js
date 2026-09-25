@@ -9,7 +9,7 @@ function normalizeNames(value){return String(value??'').split(/\r?\n/).map(title
 function parse(){const seen=new Map(),out=[];for(const raw of (e.names?.value||'').split(/\r?\n/)){const base=titleCaseName(raw);if(!base)continue;const key=base.toLocaleLowerCase(),n=(seen.get(key)||0)+1;seen.set(key,n);out.push(n===1?base:`${base} (${n})`)}return out}
 function nm(id){return state.names[id-1]||`Player ${id}`}
 function status(message,kind=''){if(e.status){e.status.textContent=message;e.status.className=`status ${kind}`}}
-function swapStatus(message,kind=''){if(e.swapStatus){e.swapStatus.textContent=message;e.swapStatus.className=`status ${kind}`}}
+function swapStatus(message,kind=''){const node=e.swapStatus||$('upNextSwapStatus');if(node){node.textContent=message;node.className=`status ${kind}`}}
 const MID_SESSION_SKILLS=['Beginner','Advanced Beginner','Intermediate','Advanced Intermediate','Advanced','Expert'];
 function normalizeSkill(v){return MID_SESSION_SKILLS.includes(v)?v:'Beginner'}
 function readSkillStore(){try{return JSON.parse(localStorage.getItem('crg-skills-v1')||'{}')||{}}catch{return{}}}
