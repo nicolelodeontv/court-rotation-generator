@@ -74,10 +74,7 @@ body.court-mode .quick .btn.full{margin:0}
   .match-log-team .live-player-name{font-size:16px}
   .match-log-team .live-player-skill{font-size:8px}
 }
-@media(min-width:701px){
-  #liveView .live-share-row{width:100%;max-width:none;margin:8px auto 0;display:grid;grid-template-columns:1fr}
-  #liveView .live-share-row>.btn{width:100%;margin:0}
-}
+body.court-mode #liveView .match-log{display:none!important}
 body.court-mode #liveView .live-share-row{width:100%;max-width:none;margin:6px auto 0;display:grid;grid-template-columns:1fr}
 body.court-mode #liveView .live-share-row>.btn{width:100%;margin:0}
 @media(max-width:700px){
