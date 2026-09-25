@@ -15,7 +15,7 @@ const chosen=[];for(const p of candidates){if((targets.get(p)||0)>plays.get(p)){
 if(chosen.length<4)for(const p of candidates){if(!chosen.includes(p)){chosen.push(p);if(chosen.length===4)break}}
 const splits=[[[chosen[0],chosen[1]],[chosen[2],chosen[3]]],[[chosen[0],chosen[2]],[chosen[1],chosen[3]]],[[chosen[0],chosen[3]],[chosen[1],chosen[2]]]];let best=splits[0],bestCost=Infinity;for(const[t1,t2]of splits){const sk1a=skillScore.get(t1[0])||3,sk1b=skillScore.get(t1[1])||3,sk2a=skillScore.get(t2[0])||3,sk2b=skillScore.get(t2[1])||3;const s1=Math.abs(sk1a-sk1b),s2=Math.abs(sk2a-sk2b),tg=Math.abs((sk1a+sk1b)-(sk2a+sk2b));let cost=s1*7+s2*7+tg*3+(partners.get(t1[0]).has(t1[1])||partners.get(t2[0]).has(t2[1])?40:0);
 // Hard-discourage two beginners ending up on the same team; prefer beginner+intermediate or beginner+advanced instead.
-if(bothBeginners(sk1a,sk1b))cost+=300;if(bothBeginners(sk2a,sk2b))cost+=300;
+if(hasIntermediateOrAdvanced&&bothBeginners(sk1a,sk1b))cost+=1000;if(hasIntermediateOrAdvanced&&bothBeginners(sk2a,sk2b))cost+=1000;
 for(const x of t1)for(const y of t2)cost+=(opps.get(x).get(y)||0)*8;if(rest==='avoid-consecutive'&&chosen.some(p=>(last.get(p)||0)>0))cost-=2;if(cost<bestCost){bestCost=cost;best=[t1.slice(),t2.slice()]}}
 const g={teams:best,court:(i%courts)+1};add(g);games[i]=g}
 return games}
@@ -25,7 +25,7 @@ if(players.length<4||total<1)return null;let participant=[...new Set([...players
 const courts=Math.max(1,Number(cfg.courts)||1),skills=cfg.skills instanceof Map?cfg.skills:new Map(Object.entries(cfg.skills||window.CRG_PLAYER_SKILLS||{})),skillScore=new Map(participant.map(p=>[p,skillValue(skills.get(p))]));
 // Guaranteed fast baseline: large rosters return a complete skill-aware schedule without entering the expensive optimizer.
 const fallback=fastFallback(players,total,targets,fixed,courts,cfg.rest,skillScore,cfg.seed||0);if(players.length>=20)return{games:fallback,score:score(fallback,players,skills)};
-const attempts=Math.max(1,Math.min(120,Number(cfg.attempts)||60)),maxEligible=Math.min(16,players.length),maxChoices=120;
+const hasIntermediateOrAdvanced=participant.some(p=>skillScore.get(p)>1);const attempts=Math.max(1,Math.min(120,Number(cfg.attempts)||60)),maxEligible=Math.min(16,players.length),maxChoices=120;
 const budgetMs=Math.max(250,Math.min(1800,Number(cfg.timeBudgetMs)||1200)),deadline=(typeof performance!=='undefined'&&performance.now?performance.now():Date.now())+budgetMs;
 const timedOut=()=>((typeof performance!=='undefined'&&performance.now?performance.now():Date.now())>=deadline);
 const skillOf=p=>skillScore.get(p)||3;let best={games:fallback,score:score(fallback,players,skills)};
@@ -42,8 +42,8 @@ const gap1=Math.abs(s1a-s1b),gap2=Math.abs(s2a-s2b),teamGap=Math.abs((s1a+s1b)-(
 local-=gap1*7+gap2*7+teamGap*3;
 // Hard-discourage two beginners on the same team; only reward a zero skill-gap pairing when it isn't beginner+beginner.
 const t1Beginner=bothBeginners(s1a,s1b),t2Beginner=bothBeginners(s2a,s2b);
-if(t1Beginner)local-=300;else if(gap1===0)local+=3;
-if(t2Beginner)local-=300;else if(gap2===0)local+=3;
+if(hasIntermediateOrAdvanced&&t1Beginner)local-=1000;else if(gap1===0)local+=3;
+if(hasIntermediateOrAdvanced&&t2Beginner)local-=1000;else if(gap2===0)local+=3;
 if(local>localBest){localBest=local;chosen={teams:[t1.slice(),t2.slice()]}}}}
 if(!ok)break;if(!chosen||!add(chosen)){ok=false;break}chosen.court=(i%courts)+1;games[i]=chosen}if(!ok)continue;if(timedOut())break;let sc=score(games,players,skills);if(!best||sc>best.score)best={games,score:sc};if(sc>=98)break}
 return best}
