@@ -3,7 +3,7 @@ if(!teams||!names)return;
 const esc=v=>String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));const clean=v=>String(v||'').trim();
 function roster(){return names.value.split(/\r?\n/).map(clean).filter(Boolean)}
 function storedSkills(){try{return JSON.parse(localStorage.getItem('crg-skills-v1')||'{}')||{}}catch{return{}}}
-function skillByName(){const list=roster(),src=window.CRG_PLAYER_SKILLS||{},stored=storedSkills(),out=new Map();list.forEach((name,i)=>out.set(name.toLocaleLowerCase(),String(src[i+1]||stored[name]||'Intermediate').toLocaleLowerCase()));return out}
+function skillByName(){const list=roster(),src=window.CRG_PLAYER_SKILLS||{},stored=storedSkills(),out=new Map();list.forEach((name,i)=>out.set(name.toLocaleLowerCase(),String(src[i+1]||stored[name]||'Beginner')));return out}
 function formatPlayer(name,skill='Intermediate'){return `<span class="live-player"><span class="live-player-name">${esc(name)}</span><small class="live-player-skill"> · ${esc(skill)}</small></span>`}
 window.CRG_FORMAT_LIVE_PLAYER=formatPlayer;
 function formatTeam(playerNames,map){return `<div class="live-team-block">${playerNames.map(n=>formatPlayer(n,map.get(clean(n).toLocaleLowerCase())||'intermediate')).join('<span class="live-plus" aria-hidden="true">+</span>')}</div>`}
