@@ -330,6 +330,6 @@ test('winner row inversion, player stars, singular games label, and setup nav vi
   await expect(page.locator('#setupNavBtn')).toBeVisible();
   await expect(page.locator('.bottom-nav .nav-btn')).toHaveCount(6);
   await expect(page.locator('#setupView')).toHaveClass(/active/);
-  await expect(page.locator('#gameMatch')).toHaveCount(0).catch?.();
+  await expect(page.locator('#scheduleList .game-row')).toHaveCount(0);
 });
 
