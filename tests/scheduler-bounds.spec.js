@@ -32,3 +32,24 @@ test('scheduler always returns a complete rotation for realistic rosters', () =>
     expect(elapsed, `${count} players exceeded the hard test ceiling`).toBeLessThan(2500);
   }
 });
+
+
+test('skill-balanced pairing minimizes combined star-total difference', () => {
+  const scheduler = loadScheduler();
+  const players = [1, 2, 3, 4];
+  const skills = new Map([[1, 'Beginner'], [2, 'Advanced Beginner'], [3, 'Advanced'], [4, 'Expert']]);
+  const result = scheduler.generate({
+    players,
+    per: 1,
+    targets: new Map(players.map(p => [p, 1])),
+    courts: 1,
+    rest: 'balanced',
+    seed: 24680,
+    skills,
+    attempts: 2,
+    timeBudgetMs: 700,
+  });
+  expect(result?.games).toHaveLength(1);
+  const sums = result.games[0].teams.map(team => team.reduce((sum, p) => sum + scheduler.skillValue(skills.get(p)), 0)).sort((a, b) => a - b);
+  expect(sums).toEqual([7, 7]);
+});

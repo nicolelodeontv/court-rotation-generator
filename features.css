@@ -1,8 +1,8 @@
 #gamingHub{margin-top:16px}
 .achievement-list{display:grid;gap:8px}.achievement-list .hint{margin:0}
 .spectator-mode{min-height:100vh}.spectator-mode .bottom-nav,.spectator-mode #offlineBadge{display:none}
-#offlineBadge{position:fixed;left:12px;bottom:106px;z-index:40;padding:7px 10px;border:1px solid var(--accent-border);border-radius:999px;background:var(--surface);color:var(--accent-soft);font:800 11px/1 var(--ui);box-shadow:var(--shadow)}
-#crgToast{position:fixed;left:50%;bottom:106px;transform:translateX(-50%);z-index:400;max-width:min(92vw,520px);padding:10px 13px;border:1px solid var(--accent-border);border-radius:var(--radius-md);background:var(--surface);color:var(--accent-soft);font:900 12px/1.25 var(--ui);box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .15s ease}#crgToast.show{opacity:1}
+#offlineBadge{position:fixed;left:12px;bottom:106px;z-index:40;padding:7px 10px;border:1px solid var(--accent-border);border-radius:999px;background:var(--surface);color:var(--accent-soft);font:800 11px/1 var(--font-body);box-shadow:var(--shadow)}
+#crgToast{position:fixed;left:50%;bottom:106px;transform:translateX(-50%);z-index:400;max-width:min(92vw,520px);padding:10px 13px;border:1px solid var(--accent-border);border-radius:var(--radius-md);background:var(--surface);color:var(--accent-soft);font:900 12px/1.25 var(--font-body);box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .15s ease}#crgToast.show{opacity:1}
 
 /* Setup layout: player roster and generator are full-width sibling sections. */
 #setupView .grid-setup{grid-template-columns:1fr;gap:var(--section-gap);margin-bottom:var(--section-gap)}
@@ -16,18 +16,18 @@
 .generate-card{grid-column:1/-1;margin-top:0}.generate-card .two{margin-bottom:16px;row-gap:14px}.generate-card .two label{display:flex;flex-direction:column;gap:7px}.generate-card .two input,.generate-card .two select{margin-top:0}
 .modal-input{width:100%;margin:8px 0 14px;min-height:44px}.modal-textarea{display:block;resize:vertical;min-height:150px;padding:12px;line-height:1.45}.modal-input[aria-invalid="true"],.modal-input.is-invalid{border-color:var(--danger)}
 .player-modal-actions{display:flex;gap:9px;justify-content:flex-end}.player-modal-actions .btn{min-width:110px;min-height:44px}
-.confirm-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;margin-top:16px}.confirm-actions .btn{min-width:110px;min-height:44px}.confirm-actions .modal-confirm{background:var(--danger);border-color:var(--danger);color:#fff}.confirm-actions .modal-confirm:hover{background:var(--danger-soft);border-color:var(--danger-soft);color:#fff}
-.schedule-team-label{display:block;margin:.15em 0 .28em;font:900 13px/1 var(--display);letter-spacing:.08em;color:var(--accent-soft)}.schedule-team-players{display:block;font-weight:900}.schedule-vs{display:block;margin:.7em 0;font:950 15px/1 var(--ui);letter-spacing:.16em;color:var(--muted);text-align:center}
+.confirm-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;margin-top:16px}.confirm-actions .btn{min-width:110px;min-height:44px}.confirm-actions .modal-confirm{background:var(--danger);border-color:var(--danger);color:var(--color-background)}.confirm-actions .modal-confirm:hover{background:var(--danger-soft);border-color:var(--danger-soft);color:var(--color-background)}.player-add-actions .modal-confirm{background:var(--accent);border-color:var(--accent-border);color:var(--accent-ink)}.player-add-actions .modal-confirm:hover{background:var(--accent-soft);border-color:var(--accent-soft);color:var(--accent-ink)}
+.schedule-team-label{display:block;margin:.15em 0 .28em;font:900 13px/1 var(--font-headline);letter-spacing:.08em;color:var(--accent-soft)}.schedule-team-players{display:block;font-weight:900}.schedule-vs{display:block;margin:.7em 0;font:950 15px/1 var(--font-body);letter-spacing:.16em;color:var(--muted);text-align:center}
 #scheduleView #scheduleList{margin-bottom:var(--section-gap)}
 
 /* Global overlay used by the existing player/reset sheet. Keep it outside document flow. */
 .sheet{position:fixed;inset:0;z-index:1000;width:100vw;height:100dvh;display:grid;place-items:center;padding:20px;overflow:auto;overscroll-behavior:contain}
 .sheet[hidden]{display:none!important}
-.sheet-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:0;cursor:pointer}
+.sheet-backdrop{position:fixed;inset:0;background:color-mix(in srgb,var(--color-text) 62%,transparent);z-index:0;cursor:pointer}
 .sheet-panel{position:relative;z-index:1;width:min(520px,calc(100vw - 40px));max-height:min(720px,calc(100dvh - 40px));overflow:auto;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);padding:22px}
-.sheet-close{position:absolute;top:10px;right:10px;z-index:2;width:44px;height:44px;display:grid;place-items:center;padding:0;border:1px solid var(--line);border-radius:50%;background:var(--surface-2);color:var(--text);font:800 24px/1 var(--ui);cursor:pointer}
+.sheet-close{position:absolute;top:10px;right:10px;z-index:2;width:44px;height:44px;display:grid;place-items:center;padding:0;border:1px solid var(--line);border-radius:50%;background:var(--surface-2);color:var(--text);font:800 24px/1 var(--font-body);cursor:pointer}
 .sheet-close:hover{background:var(--accent-surface);border-color:var(--accent-border);color:var(--accent-soft)}
-.sheet-title{padding-right:52px;margin:0 0 7px;font:900 24px/1.1 var(--display);letter-spacing:-.02em}.sheet-panel .hint{margin:0 0 8px}.sheet-panel .modal-input{margin-top:8px}
+.sheet-title{padding-right:52px;margin:0 0 7px;font:900 24px/1.1 var(--font-headline);letter-spacing:-.02em}.sheet-panel .hint{margin:0 0 8px}.sheet-panel .modal-input{margin-top:8px}
 
 @media(max-width:700px){
   #setupView .grid-setup{gap:var(--section-gap);margin-bottom:var(--section-gap)}
@@ -37,4 +37,16 @@
   .generate-card .two{row-gap:12px}.player-modal-actions{gap:8px}.player-modal-actions .btn{flex:1;min-width:0}.generate-card{margin-top:0}
   .sheet{padding:12px}.sheet-panel{width:min(520px,calc(100vw - 24px));max-height:calc(100dvh - 24px);padding:20px 16px 16px;border-radius:16px}.sheet-close{top:8px;right:8px}.sheet-title{font-size:22px}.sheet-panel .modal-input{min-height:48px;font-size:16px}.player-modal-actions{position:sticky;bottom:0;padding-top:8px;background:linear-gradient(to bottom,transparent,var(--surface) 10px,var(--surface));}
   .schedule-team-label{font-size:12px}.schedule-vs{font-size:14px;margin:.65em 0}.confirm-actions{gap:8px}.confirm-actions .btn{flex:1;min-width:0}
+}
+
+
+/* More: keep Session and Summary side by side on tablet/desktop, with natural card heights. */
+#moreView .tools-grid{align-items:start}
+#moreView .summary-card{grid-column:auto}
+@media(min-width:701px){
+  #moreView .tools-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:700px){
+  #moreView .tools-grid{grid-template-columns:1fr}
+  #moreView .summary-card{grid-column:auto}
 }
