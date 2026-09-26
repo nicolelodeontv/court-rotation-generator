@@ -241,3 +241,84 @@ test('Live uses two columns on desktop, stacks on mobile, and rankings stay sing
   expect(rankRowStyle.chips).toBe(4);
   expect(Math.abs(rankRowStyle.placementTop - rankRowStyle.nameTop)).toBeLessThan(3);
 });
+
+
+test('winner row inversion, player stars, singular games label, and setup collapse', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+
+  await page.locator('#playerPasteBtn').click();
+  await page.locator('#pastePlayerNames').fill(roster(4));
+  await page.locator('#playerConfirm').click();
+  await page.locator('#generateBtn').click();
+  await expect(page.locator('.game-match')).toHaveCount(1, { timeout: 5000 });
+
+  await expect(page.locator('#setupSummary')).toBeVisible();
+  await expect(page.locator('#setupView')).toHaveClass(/setup-collapsed/);
+  await expect(page.locator('#setupSummaryText')).toContainText('4 players');
+  await expect(page.locator('#setupSummaryToggle')).toHaveText('Edit setup ▾');
+
+  await page.locator('#setupSummaryToggle').click();
+  await expect(page.locator('#setupView')).not.toHaveClass(/setup-collapsed/);
+  await page.locator('#games').fill('2');
+  await expect(page.locator('#setupRegenerateBtn')).toBeVisible();
+  await expect(page.locator('#setupSummary')).toContainText('Changes require a new rotation.');
+
+  await page.locator('[data-view="playersView"]').click();
+  const playerCard = page.locator('.player-card').first();
+  await expect(playerCard.locator('.player-name-rating')).toBeVisible();
+  await expect(playerCard.locator('.player-skill-stars')).toHaveText(/⭐{1,6}/);
+  await expect(playerCard.locator('.stat-chip').first()).toContainText('game');
+
+  await page.locator('[data-view="liveView"]').click();
+  await page.locator('#completeBtn').click();
+  await page.locator('[data-winner="0"]').click();
+  await expect(page.locator('.sheet.final-rankings')).toBeVisible();
+
+  const firstModal = page.locator('.complete-rank-row').first();
+  await expect(firstModal).toHaveClass(/first-place/);
+  const modalStyles = await firstModal.evaluate(row => {
+    const rowStyle = getComputedStyle(row);
+    const chips = [...row.querySelectorAll('.complete-stats > span')].map(node => getComputedStyle(node));
+    return {
+      background: rowStyle.backgroundColor,
+      color: getComputedStyle(row.querySelector('.complete-name')).color,
+      chipBackgrounds: chips.map(style => style.backgroundColor),
+      chipColors: chips.map(style => style.color),
+      gameChip: row.querySelector('.complete-games-played')?.textContent || '',
+      rowDisplay: rowStyle.display,
+      rowWrap: rowStyle.flexWrap,
+      identityTop: row.querySelector('.complete-identity')?.getBoundingClientRect().top,
+      placeTop: row.querySelector('.complete-place')?.getBoundingClientRect().top,
+      nameTop: row.querySelector('.complete-name')?.getBoundingClientRect().top,
+      chipsTop: row.querySelector('.complete-stats')?.getBoundingClientRect().top,
+    };
+  });
+  expect(modalStyles.background).not.toBe('rgb(55, 64, 48)');
+  expect(modalStyles.color).toBe('rgb(42, 51, 40)');
+  expect(modalStyles.chipBackgrounds.every(value => value === 'rgb(42, 51, 40)')).toBeTruthy();
+  expect(modalStyles.chipColors.every(value => value === 'rgb(239, 234, 221)')).toBeTruthy();
+  expect(modalStyles.gameChip).toBe('1 game');
+  expect(modalStyles.rowDisplay).toBe('flex');
+  expect(modalStyles.rowWrap).toBe('nowrap');
+  expect(Math.abs(modalStyles.placeTop - modalStyles.nameTop)).toBeLessThan(3);
+  expect(Math.abs(modalStyles.identityTop - modalStyles.chipsTop)).toBeLessThan(3);
+
+  await page.locator('#completeCloseBtn').click();
+  await page.locator('[data-view="rankingsView"]').click();
+  const firstRanksRow = page.locator('.rank-row').first();
+  await expect(firstRanksRow).toHaveClass(/first-place/);
+  await expect(firstRanksRow.locator('.rank-stats .rank-chip').nth(2)).toHaveText('1 game');
+
+  const ranksStyles = await firstRanksRow.evaluate(row => ({
+    background: getComputedStyle(row).backgroundColor,
+    text: getComputedStyle(row.querySelector('.rank-name')).color,
+    chipBackground: getComputedStyle(row.querySelector('.rank-chip')).backgroundColor,
+    chipText: getComputedStyle(row.querySelector('.rank-chip')).color,
+  }));
+  expect(ranksStyles.background).not.toBe('rgb(55, 64, 48)');
+  expect(ranksStyles.text).toBe('rgb(42, 51, 40)');
+  expect(ranksStyles.chipBackground).toBe('rgb(42, 51, 40)');
+  expect(ranksStyles.chipText).toBe('rgb(239, 234, 221)');
+});
