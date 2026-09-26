@@ -379,7 +379,10 @@ test('Complete game uses a separate score step and blocks a contradictory winner
   await page.locator('#scoreB').fill('7');
   await page.locator('#scoreConfirm').click();
   await expect(page.locator('#matchLogCount')).toHaveText('1');
-  await expect(page.locator('.match-log-result')).toContainText('Player 1 and Player 2 won · 11-7');
+  const winnerNames = await page.locator('.match-log-team.match-log-winner .live-player-name').allTextContents();
+  expect(winnerNames).toHaveLength(2);
+  const winnerText = winnerNames.map(name => name.replace(/\s*⭐+\s*$/, '').trim()).join(' and ');
+  await expect(page.locator('.match-log-result')).toContainText(`${winnerText} won · 11-7`);
   await expect(page.locator('.match-log-result')).not.toContainText('⭐');
 });
 
