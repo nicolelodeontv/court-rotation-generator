@@ -325,9 +325,9 @@ test('Up Next width and fixed header navigation stay aligned', async ({ page }) 
   expect(Math.abs(bounds.panelTop - bounds.gridTop)).toBeLessThanOrEqual(1);
   expect(Math.abs(bounds.panelBottom - bounds.mainBottom)).toBeLessThanOrEqual(1);
   expect(Math.abs(bounds.panelWidth - bounds.listWidth)).toBeLessThanOrEqual(2);
-  expect(Math.abs(bounds.navTop - bounds.topbarTop)).toBeLessThanOrEqual(1);
-  expect(Math.abs(bounds.navRight - bounds.appRight)).toBeLessThanOrEqual(1);
-  expect(bounds.navPosition).toBe('fixed');
+  expect(bounds.navTop).toBeGreaterThanOrEqual(bounds.topbarTop);
+  expect(await page.locator('.bottom-nav').evaluate(node => node.parentElement?.classList.contains('topbar'))).toBeTruthy();
+  expect(bounds.navPosition).toBe('static');
   expect(bounds.navBottomStyle).toBe('auto');
   expect(await page.locator('.bottom-nav').evaluate(node => getComputedStyle(node).columnGap)).toBe('14px');
   expect(await page.locator('.bottom-nav').evaluate(node => node.parentElement === document.body)).toBeTruthy();
@@ -342,7 +342,7 @@ test('Up Next width and fixed header navigation stay aligned', async ({ page }) 
   const navBeforeScroll = await page.locator('.bottom-nav').evaluate(node => node.getBoundingClientRect().top);
   await page.evaluate(() => window.scrollTo(0, 500));
   const navAfterScroll = await page.locator('.bottom-nav').evaluate(node => node.getBoundingClientRect().top);
-  expect(Math.abs(navAfterScroll - navBeforeScroll)).toBeLessThanOrEqual(1);
+  expect(navAfterScroll).toBeLessThan(navBeforeScroll - 10);
 });
 
 test('Complete game uses a separate score step and blocks a contradictory winner score', async ({ page }) => {
@@ -396,24 +396,35 @@ test('Win by 2 toggle persists across games and validates deuce scores', async (
 
   await page.locator('#completeBtn').click();
   await page.locator('[data-winner="0"]').click();
-  await expect(page.locator('#winByTwoToggle')).toBeChecked();
-  await page.locator('#scoreA').fill('11');
-  await page.locator('#scoreB').fill('10');
-  await page.locator('#scoreConfirm').click();
-  await expect(page.locator('#scoreError')).toContainText('At 10-10 or later');
-  await expect(page.locator('#matchLogCount')).toHaveText('0');
-
-  await page.locator('#winByTwoToggle').uncheck();
-  await page.locator('#scoreConfirm').click();
-  await expect(page.locator('#matchLogCount')).toHaveText('1');
-
-  await page.locator('#completeBtn').click();
-  await page.locator('[data-winner="0"]').click();
   await expect(page.locator('#winByTwoToggle')).not.toBeChecked();
   await page.locator('#scoreA').fill('11');
   await page.locator('#scoreB').fill('10');
   await page.locator('#scoreConfirm').click();
+  await expect(page.locator('#matchLogCount')).toHaveText('1');
+  await expect(page.locator('.deuce-badge')).toHaveCount(1);
+
+  await page.locator('#completeBtn').click();
+  await page.locator('[data-winner="0"]').click();
+  await expect(page.locator('#winByTwoToggle')).not.toBeChecked();
+  await page.locator('#winByTwoToggle').check();
+  await page.locator('#scoreA').fill('11');
+  await page.locator('#scoreB').fill('10');
+  await page.locator('#scoreConfirm').click();
+  await expect(page.locator('#scoreError')).toContainText('At 10-10 or later');
+  await page.locator('#scoreA').fill('12');
+  await page.locator('#scoreB').fill('10');
+  await page.locator('#scoreConfirm').click();
   await expect(page.locator('#matchLogCount')).toHaveText('2');
+  await expect(page.locator('.deuce-badge')).toHaveCount(2);
+
+  await page.locator('#completeBtn').click();
+  await page.locator('[data-winner="0"]').click();
+  await expect(page.locator('#winByTwoToggle')).toBeChecked();
+  await page.locator('#winByTwoToggle').uncheck();
+  await page.locator('#scoreA').fill('11');
+  await page.locator('#scoreB').fill('7');
+  await page.locator('#scoreConfirm').click();
+  await expect(page.locator('.deuce-badge')).toHaveCount(2);
 });
 test('Next game free swap commits the generated game unchanged without validation blocking', async ({ page }) => {
   await page.goto('/');
@@ -520,6 +531,7 @@ test('Live uses two columns on desktop, stacks on mobile, and rankings stay sing
   expect(desktopLayout.columns).toContain(' ');
   expect(desktopLayout.leftRight).toBeLessThanOrEqual(desktopLayout.rightLeft);
   expect(desktopLayout.logTop).toBeGreaterThanOrEqual(desktopLayout.columnBottom);
+  const inProgressPanelHeight = await page.locator('#liveView .live-upnext-column > .upnext').evaluate(node => node.getBoundingClientRect().height);
 
   await page.setViewportSize({ width: 600, height: 900 });
   await expect.poll(() => page.evaluate(() => getComputedStyle(document.querySelector('#liveView .live-grid')).display)).toBe('block');
@@ -545,6 +557,18 @@ test('Live uses two columns on desktop, stacks on mobile, and rankings stay sing
   await page.locator('#scoreConfirm').click();
   }
   await expect(page.locator('.sheet.final-rankings')).toBeVisible();
+  await page.locator('#completeCloseBtn').click();
+  const completeBounds = await page.evaluate(() => {
+    const main = document.querySelector('#liveView .live-main-column');
+    const panel = document.querySelector('#liveView .live-upnext-column > .upnext');
+    const mr = main?.getBoundingClientRect();
+    const pr = panel?.getBoundingClientRect();
+    return { mainHeight: mr?.height || 0, mainBottom: mr?.bottom || 0, panelHeight: pr?.height || 0, panelBottom: pr?.bottom || 0 };
+  });
+  expect(Math.abs(completeBounds.panelBottom - completeBounds.mainBottom)).toBeLessThanOrEqual(1);
+  expect(Math.abs(completeBounds.panelHeight - completeBounds.mainHeight)).toBeLessThanOrEqual(1);
+  expect(completeBounds.panelHeight).toBeLessThan(inProgressPanelHeight);
+  await expect(page.locator('#upNextList .hint')).toHaveText('No games remaining.');
   const finalRows = await page.locator('.complete-rank-row').evaluateAll(rows => rows.map(row => {
     const style = getComputedStyle(row);
     const identity = row.querySelector('.complete-identity');
@@ -571,7 +595,6 @@ test('Live uses two columns on desktop, stacks on mobile, and rankings stay sing
   expect(finalRows.every(row => row.chips === 4)).toBeTruthy();
   await page.screenshot({ path: 'test-results/rankings-modal-single-row.png', fullPage: true });
 
-  await page.locator('#completeCloseBtn').click();
   await page.locator('[data-view="rankingsView"]').click();
   await expect(page.locator('.rank-row').first()).toBeVisible();
   const rankRowStyle = await page.locator('.rank-row').first().evaluate(row => ({
