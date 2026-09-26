@@ -271,6 +271,48 @@ test('Players tab keeps vertical spacing between identity and stat chips on desk
   }
 });
 
+test('persistent current-game bar is distinct and Up Next keeps natural content height on desktop', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+  await page.locator('#playerPasteBtn').click();
+  await page.locator('#pastePlayerNames').fill(roster(20));
+  await page.locator('#playerConfirm').click();
+  await page.locator('#generateBtn').click();
+  await expect(page.locator('.game-match')).toHaveCount(30, { timeout: 5000 });
+
+  const styleCheck = await page.evaluate(() => {
+    const sticky = document.querySelector('#stickyLive');
+    const upnext = document.querySelector('#liveView .live-upnext-column > .upnext');
+    const grid = document.querySelector('#liveView .live-grid');
+    const lastGame = document.querySelector('#upNextList .next-item:last-of-type');
+    const gridStyle = grid ? getComputedStyle(grid) : null;
+    const stickyStyle = sticky ? getComputedStyle(sticky) : null;
+    const upRect = upnext?.getBoundingClientRect();
+    const lastRect = lastGame?.getBoundingClientRect();
+    const upStyle = upnext ? getComputedStyle(upnext) : null;
+    return {
+      stickyBackground: stickyStyle?.backgroundColor || '',
+      stickyColor: stickyStyle?.color || '',
+      gridAlignItems: gridStyle?.alignItems || '',
+      upnextHeight: upRect?.height || 0,
+      upnextTop: upRect?.top || 0,
+      lastGameBottom: lastRect?.bottom || 0,
+      upnextPaddingBottom: parseFloat(upStyle?.paddingBottom || '0'),
+      upnextBorderBottom: parseFloat(upStyle?.borderBottomWidth || '0'),
+    };
+  });
+
+  expect(styleCheck.stickyBackground).toBe('rgb(111, 61, 42)');
+  expect(styleCheck.stickyColor).toBe('rgb(239, 234, 221)');
+  expect(styleCheck.gridAlignItems).toBe('start');
+
+  const cardBox = await page.locator('#liveView .live-upnext-column > .upnext').boundingBox();
+  if (!cardBox) throw new Error('Could not measure Up Next card');
+  const trailingSpace = styleCheck.upnextHeight - (styleCheck.lastGameBottom - cardBox.y);
+  expect(Math.abs(trailingSpace - styleCheck.upnextPaddingBottom - styleCheck.upnextBorderBottom)).toBeLessThan(2);
+});
+
 test('Next game free swap commits the generated game unchanged without validation blocking', async ({ page }) => {
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
