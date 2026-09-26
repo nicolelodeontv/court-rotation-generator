@@ -29,12 +29,9 @@ async function generateScenario(page, playerCount, expectedGames) {
 }
 
 async function assertLiveFormatting(page, totalGames) {
-  const sticky = page.locator('#stickyLive');
-  await expect(sticky).toBeVisible();
-  await expect(page.locator('#stickyGame')).toHaveText(new RegExp(`^Game 1 / ${totalGames} — `));
-  await expect(page.locator('#stickyGame')).not.toContainText('1/');
-  await expect(page.locator('#stickyGame')).not.toContainText(`${totalGames}Player`);
-  await expect(page.locator('#stickyMatch')).toBeHidden();
+  await expect(page.locator('#stickyLive')).toHaveCount(0);
+  await expect(page.locator('#liveView .live-card')).toBeVisible();
+  await expect(page.locator('#progressText')).toHaveText(`0 / ${totalGames} games`);
 
   const skills = page.locator('#upNextList .live-player-stars');
   const players = page.locator('#upNextList .live-player-name');
@@ -153,7 +150,7 @@ test('Up Next free reorder moves the whole generated game without validation blo
   await expect(page.locator('.upnext-dragging-card')).toHaveCount(0);
   await expect(page.locator('.upnext-drag-placeholder')).toHaveCount(0);
   await expect(page.locator('#upNextList .next-item[data-upcoming-index]')).toHaveCount(3);
-  await expect(page.locator('#upNextList .next-item > span:first-child')).toHaveText(['G2', 'G3', 'G4']);
+  await expect(page.locator('#upNextList .next-item > span:first-child')).toHaveText(['Game 2', 'Game 3', 'Game 4']);
 
   const after = await page.evaluate(() => {
     const row = document.querySelector('#scheduleList .game-row:nth-child(4)');
@@ -165,7 +162,7 @@ test('Up Next free reorder moves the whole generated game without validation blo
   });
   expect(after.match).toBe(before.match);
   expect(after.labels).toEqual(before.labels);
-  expect(after.status).toContain('Moved Game 2 to G4.');
+  expect(after.status).toContain('Moved Game 2 to Game 4.');
 });
 
 test('Up Next keyboard reorder and mobile long-press path keep the queue usable', async ({ page }) => {
@@ -274,7 +271,7 @@ test('Players tab keeps vertical spacing between identity and stat chips on desk
   }
 });
 
-test('current-game bar, Up Next width, and fixed header navigation stay aligned', async ({ page }) => {
+test('Up Next width and fixed header navigation stay aligned', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
@@ -285,7 +282,6 @@ test('current-game bar, Up Next width, and fixed header navigation stay aligned'
   await expect(page.locator('.game-match')).toHaveCount(30, { timeout: 5000 });
 
   const bounds = await page.evaluate(() => {
-    const sticky = document.querySelector('#stickyLive');
     const panel = document.querySelector('#liveView .live-upnext-column > .upnext');
     const upList = document.querySelector('#upNextList');
     const grid = document.querySelector('#liveView .live-grid');
@@ -295,7 +291,6 @@ test('current-game bar, Up Next width, and fixed header navigation stay aligned'
     const nav = document.querySelector('.bottom-nav');
     const addPlayer = document.querySelector('#addMidSessionPlayerBtn');
     const courtMode = document.querySelector('#courtModeBtn');
-    const stickyStyle = sticky ? getComputedStyle(sticky) : null;
     const panelRect = panel?.getBoundingClientRect();
     const listRect = upList?.getBoundingClientRect();
     const mainRect = main?.getBoundingClientRect();
@@ -307,8 +302,7 @@ test('current-game bar, Up Next width, and fixed header navigation stay aligned'
     const addRect = addPlayer?.getBoundingClientRect();
     const courtRect = courtMode?.getBoundingClientRect();
     return {
-      stickyBackground: stickyStyle?.backgroundColor || '',
-      stickyColor: stickyStyle?.color || '',
+      stickyCount: document.querySelectorAll('#stickyLive').length,
       panelTop: panelRect?.top || 0,
       panelBottom: panelRect?.bottom || 0,
       panelRight: panelRect?.right || 0,
@@ -327,8 +321,7 @@ test('current-game bar, Up Next width, and fixed header navigation stay aligned'
     };
   });
 
-  expect(bounds.stickyBackground).toBe('rgb(111, 61, 42)');
-  expect(bounds.stickyColor).toBe('rgb(239, 234, 221)');
+  expect(bounds.stickyCount).toBe(0);
   expect(Math.abs(bounds.panelTop - bounds.gridTop)).toBeLessThanOrEqual(1);
   expect(Math.abs(bounds.panelBottom - bounds.mainBottom)).toBeLessThanOrEqual(1);
   expect(Math.abs(bounds.panelWidth - bounds.listWidth)).toBeLessThanOrEqual(2);
@@ -338,6 +331,11 @@ test('current-game bar, Up Next width, and fixed header navigation stay aligned'
   expect(bounds.navBottomStyle).toBe('auto');
   expect(await page.locator('.bottom-nav').evaluate(node => getComputedStyle(node).columnGap)).toBe('14px');
   expect(await page.locator('.bottom-nav').evaluate(node => node.parentElement === document.body)).toBeTruthy();
+  await expect(page.locator('#scheduleList .game-label')).toHaveText(Array.from({ length: 30 }, (_, i) => `Game ${i + 1}`));
+  for (const view of ['setupView', 'liveView', 'scheduleView', 'playersView', 'rankingsView', 'moreView']) {
+    await page.locator(`[data-view="${view}"]`).click();
+    await expect(page.locator('#stickyLive')).toHaveCount(0);
+  }
   expect(bounds.addVisible).toBeTruthy();
   expect(bounds.courtVisible).toBeTruthy();
 
@@ -462,7 +460,7 @@ test('Next game free swap commits the generated game unchanged without validatio
   expect(after.currentNames).toEqual(before.upcomingNames);
   expect(after.firstUpNextNames).toEqual(before.currentNames || []);
   expect(after.currentTeams.join(' | ')).not.toBe('');
-  expect(after.firstLabel).toBe('G2');
+  expect(after.firstLabel).toBe('Game 2');
   expect(after.progress).toBe(before.progress);
   expect(after.logCount).toBe(before.logCount);
   expect(after.firstMatch).toBe(before.nextMatch);
