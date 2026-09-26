@@ -144,3 +144,100 @@ test('Ranks tab uses the shared medal placement labels', async ({ page }) => {
   const labels = await page.locator('.rank-pos').allTextContents();
   expect(labels.slice(0, 3)).toEqual(['🏆🥇 1st', '🥈 2nd', '🥉 3rd']);
 });
+
+
+test('Live uses two columns on desktop, stacks on mobile, and rankings stay single-row', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+  await page.locator('#playerPasteBtn').click();
+  await page.locator('#pastePlayerNames').fill(roster(8));
+  await page.locator('#playerConfirm').click();
+  await page.locator('#generateBtn').click();
+  await expect(page.locator('.game-match')).toHaveCount(12, { timeout: 5000 });
+
+  const desktopLayout = await page.evaluate(() => {
+    const grid = document.querySelector('#liveView .live-grid');
+    const left = document.querySelector('#liveView .live-main-column');
+    const right = document.querySelector('#liveView .live-upnext-column');
+    const log = document.querySelector('#liveView .match-log');
+    const style = grid ? getComputedStyle(grid) : null;
+    const lr = left?.getBoundingClientRect();
+    const rr = right?.getBoundingClientRect();
+    const mr = log?.getBoundingClientRect();
+    return {
+      display: style?.display,
+      columns: style?.gridTemplateColumns,
+      leftRight: lr?.right,
+      rightLeft: rr?.left,
+      logTop: mr?.top,
+      columnBottom: Math.max(lr?.bottom || 0, rr?.bottom || 0),
+    };
+  });
+  expect(desktopLayout.display).toBe('grid');
+  expect(desktopLayout.columns).toContain(' ');
+  expect(desktopLayout.leftRight).toBeLessThanOrEqual(desktopLayout.rightLeft);
+  expect(desktopLayout.logTop).toBeGreaterThanOrEqual(desktopLayout.columnBottom);
+
+  await page.setViewportSize({ width: 600, height: 900 });
+  await expect.poll(() => page.evaluate(() => getComputedStyle(document.querySelector('#liveView .live-grid')).display)).toBe('block');
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.locator('[data-view="scheduleView"]').click();
+  const schedule = await page.evaluate(() => ({
+    stars: document.querySelectorAll('.game-row .schedule-player-stars').length,
+    labels: [...document.querySelectorAll('.game-row .game-team-label')].slice(0, 2).map(node => node.textContent),
+    firstMatch: document.querySelector('.game-row .game-match')?.innerText || '',
+  }));
+  expect(schedule.stars).toBe(48);
+  expect(schedule.labels[0]).toMatch(/^TEAM A \(\d+★\)$/);
+  expect(schedule.labels[1]).toMatch(/^TEAM B \(\d+★\)$/);
+  expect(schedule.firstMatch).toMatch(/⭐/);
+
+  await page.locator('[data-view="liveView"]').click();
+  for (let i = 0; i < 12; i++) {
+    await page.locator('#completeBtn').click();
+    await page.locator('[data-winner="0"]').click();
+  }
+  await expect(page.locator('.sheet.final-rankings')).toBeVisible();
+  const finalRows = await page.locator('.complete-rank-row').evaluateAll(rows => rows.map(row => {
+    const style = getComputedStyle(row);
+    const identity = row.querySelector('.complete-identity');
+    const place = row.querySelector('.complete-place');
+    const name = row.querySelector('.complete-name');
+    const stats = row.querySelector('.complete-stats');
+    return {
+      display: style.display,
+      flexWrap: style.flexWrap,
+      rowTop: row.getBoundingClientRect().top,
+      identityTop: identity?.getBoundingClientRect().top,
+      placeTop: place?.getBoundingClientRect().top,
+      nameTop: name?.getBoundingClientRect().top,
+      statsTop: stats?.getBoundingClientRect().top,
+      chips: stats ? stats.querySelectorAll('span').length : 0,
+    };
+  }));
+  expect(finalRows).toHaveLength(8);
+  expect(finalRows.every(row => row.display === 'flex')).toBeTruthy();
+  expect(finalRows.every(row => row.flexWrap === 'nowrap')).toBeTruthy();
+  expect(finalRows.every(row => Math.abs(row.identityTop - row.rowTop) < 3)).toBeTruthy();
+  expect(finalRows.every(row => Math.abs(row.placeTop - row.nameTop) < 3)).toBeTruthy();
+  expect(finalRows.every(row => Math.abs(row.statsTop - row.rowTop) < 3)).toBeTruthy();
+  expect(finalRows.every(row => row.chips === 4)).toBeTruthy();
+  await page.screenshot({ path: 'test-results/rankings-modal-single-row.png', fullPage: true });
+
+  await page.locator('#completeCloseBtn').click();
+  await page.locator('[data-view="rankingsView"]').click();
+  await expect(page.locator('.rank-row').first()).toBeVisible();
+  const rankRowStyle = await page.locator('.rank-row').first().evaluate(row => ({
+    display: getComputedStyle(row).display,
+    identityDisplay: getComputedStyle(row.querySelector('.rank-identity')).display,
+    chips: row.querySelectorAll('.rank-stats .rank-chip').length,
+    placementTop: row.querySelector('.rank-pos')?.getBoundingClientRect().top,
+    nameTop: row.querySelector('.rank-name')?.getBoundingClientRect().top,
+  }));
+  expect(rankRowStyle.display).toBe('flex');
+  expect(rankRowStyle.identityDisplay).toBe('flex');
+  expect(rankRowStyle.chips).toBe(4);
+  expect(Math.abs(rankRowStyle.placementTop - rankRowStyle.nameTop)).toBeLessThan(3);
+});
