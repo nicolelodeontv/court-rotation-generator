@@ -98,7 +98,42 @@ test('15-game live formatting and spectator current card stay correct', async ({
 });
 
 
-test('Up Next swaps work in both directions and clear selection', async ({ page }) => {
+test('Up Next uses drag handles and keyboard reordering instead of swap buttons', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+  await page.locator('#playerPasteBtn').click();
+  await page.locator('#pastePlayerNames').fill(roster(20));
+  await page.locator('#playerConfirm').click();
+  await page.locator('#generateBtn').click();
+  await expect(page.locator('.game-match')).toHaveCount(30, { timeout: 5000 });
+
+  await expect(page.locator('.upnext-swap')).toHaveCount(0);
+  await expect(page.locator('[data-swap-game]')).toHaveCount(0);
+  await expect(page.locator('#upNextList .drag-handle')).toHaveCount(3);
+  await expect(page.locator('#upNextList .next-item[data-upcoming-index]')).toHaveCount(3);
+
+  const handleStyle = await page.locator('#upNextList .drag-handle').first().evaluate(node => {
+    const style = getComputedStyle(node);
+    return { position: style.position, cursor: style.cursor };
+  });
+  expect(handleStyle.position).toBe('absolute');
+  expect(handleStyle.cursor).toContain('grab');
+
+  await page.locator('#upNextList .next-item[data-upcoming-index="2"]').focus();
+  await page.keyboard.press('ArrowUp');
+  await expect(page.locator('#upNextList .next-item')).toHaveCount(3);
+  const queue = await page.locator('#upNextList .next-item[data-upcoming-index]').evaluateAll(items =>
+    items.map(item => ({
+      source: Number(item.dataset.upcomingIndex),
+      label: item.querySelector(':scope > span')?.textContent || '',
+    }))
+  );
+  expect(queue.map(item => item.source)).toEqual([2, 1, 3]);
+  expect(queue.map(item => item.label)).toEqual(['G2', 'G3', 'G4']);
+});
+
+test('Match log team names stay on one compact flex row per team', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
   await page.locator('#playerPasteBtn').click();
@@ -106,28 +141,79 @@ test('Up Next swaps work in both directions and clear selection', async ({ page 
   await page.locator('#playerConfirm').click();
   await page.locator('#generateBtn').click();
   await expect(page.locator('.game-match')).toHaveCount(12, { timeout: 5000 });
-  for (let i = 0; i < 8; i++) await page.locator('#nextBtn').click({ force: true });
-  expect(await page.locator('#upNextList [data-swap-game]').evaluateAll(btns => btns.map(b => Number(b.dataset.swapGame)))).toEqual([10, 11, 12]);
-  const rows = page.locator('#upNextList .next-item');
-  const before = await rows.evaluateAll(items => items.map(item => item.querySelectorAll('span')[1]?.innerText || ''));
-  let pair = null;
-  for (const [a, b] of [[10, 11], [10, 12], [11, 12]]) {
-    await page.locator('[data-swap-game="'+a+'"]').click();
-    await expect(page.locator('[data-swap-game="'+a+'"]')).toHaveText(/Swap selected/);
-    await page.locator('[data-swap-game="'+b+'"]').click();
-    if (await page.locator('#upNextSwapStatus').textContent().then(t => /Swapped Game/.test(t))) { pair = [a, b]; break; }
+
+  await page.locator('#completeBtn').click();
+  await page.locator('[data-winner="0"]').click();
+  await expect(page.locator('.match-log-entry')).toHaveCount(1);
+
+  const teams = await page.locator('.match-log-entry .match-log-team').evaluateAll(nodes => nodes.map(node => {
+    const block = node.querySelector('.live-team-block');
+    const players = [...node.querySelectorAll('.live-player')];
+    const and = node.querySelector('.live-and');
+    const style = block ? getComputedStyle(block) : null;
+    const tops = [...players, ...(and ? [and] : [])].map(el => el.getBoundingClientRect().top);
+    return {
+      display: style?.display,
+      flexDirection: style?.flexDirection,
+      alignItems: style?.alignItems,
+      gap: style?.gap,
+      playerCount: players.length,
+      maxTopDelta: tops.length ? Math.max(...tops) - Math.min(...tops) : 0,
+    };
+  }));
+  expect(teams).toHaveLength(2);
+  for (const team of teams) {
+    expect(team.display).toBe('flex');
+    expect(team.flexDirection).toBe('row');
+    expect(team.alignItems).toBe('center');
+    expect(parseFloat(team.gap)).toBeGreaterThan(0);
+    expect(team.playerCount).toBe(2);
+    expect(team.maxTopDelta).toBeLessThan(5);
   }
-  expect(pair, 'At least one upcoming pair should be swappable').not.toBeNull();
-  const after = await rows.evaluateAll(items => items.map(item => item.querySelectorAll('span')[1]?.innerText || ''));
-  expect(after).not.toEqual(before);
-  expect(await page.locator('.upnext-swap.is-selected').count()).toBe(0);
-  const [a, b] = pair;
-  await page.locator('[data-swap-game="'+b+'"]').click();
-  await expect(page.locator('[data-swap-game="'+b+'"]')).toHaveText(/Swap selected/);
-  await page.locator('[data-swap-game="'+a+'"]').click();
-  await expect(page.locator('#upNextSwapStatus')).toContainText('Swapped Game');
-  expect(await rows.evaluateAll(items => items.map(item => item.querySelectorAll('span')[1]?.innerText || ''))).toEqual(before);
-  expect(await page.locator('.upnext-swap.is-selected').count()).toBe(0);
+  await expect(page.locator('.match-log-result')).toContainText('Team A won');
+  await expect(page.locator('.match-log-vs')).toHaveText('VS');
+});
+
+test('Next game swaps the current matchup with the following game without completing it', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+  await page.locator('#playerPasteBtn').click();
+  await page.locator('#pastePlayerNames').fill(roster(20));
+  await page.locator('#playerConfirm').click();
+  await page.locator('#generateBtn').click();
+  await expect(page.locator('.game-match')).toHaveCount(30, { timeout: 5000 });
+
+  const before = await page.evaluate(() => {
+    const currentNames = [...document.querySelectorAll('#currentTeams .live-player-name')]
+      .map(node => node.textContent.replace(/\s*⭐+\s*$/, '').trim());
+    const upcomingNames = [...document.querySelectorAll('#upNextList .next-item:first-child .live-player-name')]
+      .map(node => node.textContent.replace(/\s*⭐+\s*$/, '').trim());
+    return {
+      currentNames,
+      upcomingNames,
+      progress: document.querySelector('#progressText')?.textContent || '',
+      logCount: document.querySelector('#matchLogCount')?.textContent || '',
+    };
+  });
+
+  await page.locator('#nextBtn').click();
+
+  const after = await page.evaluate(() => ({
+    currentNames: [...document.querySelectorAll('#currentTeams .live-player-name')]
+      .map(node => node.textContent.replace(/\s*⭐+\s*$/, '').trim()),
+    firstUpNextNames: [...document.querySelectorAll('#upNextList .next-item:first-child .live-player-name')]
+      .map(node => node.textContent.replace(/\s*⭐+\s*$/, '').trim()),
+    firstLabel: document.querySelector('#upNextList .next-item:first-child > span:first-child')?.textContent || '',
+    progress: document.querySelector('#progressText')?.textContent || '',
+    logCount: document.querySelector('#matchLogCount')?.textContent || '',
+  }));
+
+  expect(after.currentNames).toEqual(before.upcomingNames);
+  expect(after.firstUpNextNames).toEqual(before.currentNames);
+  expect(after.firstLabel).toBe('G2');
+  expect(after.progress).toBe(before.progress);
+  expect(after.logCount).toBe(before.logCount);
+  await expect(page.locator('#currentNo')).toHaveText('GAME 1');
 });
 
 test('Ranks tab uses the shared medal placement labels', async ({ page }) => {
