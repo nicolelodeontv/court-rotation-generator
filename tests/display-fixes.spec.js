@@ -274,7 +274,7 @@ test('Players tab keeps vertical spacing between identity and stat chips on desk
   }
 });
 
-test('current-game bar and Up Next align with the Live content row', async ({ page }) => {
+test('current-game bar, Up Next width, and fixed header navigation stay aligned', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
@@ -287,30 +287,43 @@ test('current-game bar and Up Next align with the Live content row', async ({ pa
   const bounds = await page.evaluate(() => {
     const sticky = document.querySelector('#stickyLive');
     const panel = document.querySelector('#liveView .live-upnext-column > .upnext');
+    const upList = document.querySelector('#upNextList');
     const grid = document.querySelector('#liveView .live-grid');
     const main = document.querySelector('#liveView .live-main-column');
+    const app = document.querySelector('.app');
+    const topbar = document.querySelector('.topbar');
+    const nav = document.querySelector('.bottom-nav');
     const addPlayer = document.querySelector('#addMidSessionPlayerBtn');
     const courtMode = document.querySelector('#courtModeBtn');
-    const nav = document.querySelector('.bottom-nav');
     const stickyStyle = sticky ? getComputedStyle(sticky) : null;
     const panelRect = panel?.getBoundingClientRect();
+    const listRect = upList?.getBoundingClientRect();
     const mainRect = main?.getBoundingClientRect();
     const gridRect = grid?.getBoundingClientRect();
+    const appRect = app?.getBoundingClientRect();
+    const topbarRect = topbar?.getBoundingClientRect();
+    const navRect = nav?.getBoundingClientRect();
+    const navStyle = nav ? getComputedStyle(nav) : null;
     const addRect = addPlayer?.getBoundingClientRect();
     const courtRect = courtMode?.getBoundingClientRect();
-    const navStyle = nav ? getComputedStyle(nav) : null;
     return {
       stickyBackground: stickyStyle?.backgroundColor || '',
       stickyColor: stickyStyle?.color || '',
       panelTop: panelRect?.top || 0,
       panelBottom: panelRect?.bottom || 0,
+      panelRight: panelRect?.right || 0,
+      panelWidth: panelRect?.width || 0,
+      listWidth: listRect?.width || 0,
       gridTop: gridRect?.top || 0,
       mainBottom: mainRect?.bottom || 0,
+      appRight: appRect?.right || 0,
+      topbarTop: topbarRect?.top || 0,
+      navTop: navRect?.top || 0,
+      navRight: navRect?.right || 0,
+      navPosition: navStyle?.position || '',
+      navBottomStyle: navStyle?.bottom || '',
       addVisible: !!addRect && addRect.width > 0 && addRect.height > 0,
       courtVisible: !!courtRect && courtRect.width > 0 && courtRect.height > 0,
-      navPosition: navStyle?.position || '',
-      navTop: nav?.getBoundingClientRect().top || 0,
-      navBottomStyle: navStyle?.bottom || '',
     };
   });
 
@@ -318,11 +331,18 @@ test('current-game bar and Up Next align with the Live content row', async ({ pa
   expect(bounds.stickyColor).toBe('rgb(239, 234, 221)');
   expect(Math.abs(bounds.panelTop - bounds.gridTop)).toBeLessThanOrEqual(1);
   expect(Math.abs(bounds.panelBottom - bounds.mainBottom)).toBeLessThanOrEqual(1);
-  expect(bounds.addVisible).toBeTruthy();
-  expect(bounds.courtVisible).toBeTruthy();
+  expect(Math.abs(bounds.panelWidth - bounds.listWidth)).toBeLessThanOrEqual(2);
+  expect(Math.abs(bounds.navTop - bounds.topbarTop)).toBeLessThanOrEqual(1);
+  expect(Math.abs(bounds.navRight - bounds.appRight)).toBeLessThanOrEqual(1);
   expect(bounds.navPosition).toBe('fixed');
   expect(bounds.navBottomStyle).toBe('auto');
-  expect(bounds.navTop).toBeGreaterThanOrEqual(0);
+  expect(bounds.addVisible).toBeTruthy();
+  expect(bounds.courtVisible).toBeTruthy();
+
+  const navBeforeScroll = await page.locator('.bottom-nav').evaluate(node => node.getBoundingClientRect().top);
+  await page.evaluate(() => window.scrollTo(0, 500));
+  const navAfterScroll = await page.locator('.bottom-nav').evaluate(node => node.getBoundingClientRect().top);
+  expect(Math.abs(navAfterScroll - navBeforeScroll)).toBeLessThanOrEqual(1);
 });
 
 test('Complete game uses a separate score step and blocks a contradictory winner score', async ({ page }) => {
