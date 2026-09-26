@@ -37,3 +37,14 @@ body.modal-open{overflow:hidden}
 @media(max-width:700px){.sheet.final-rankings .sheet-panel{max-height:none;overflow:visible}}
 .complete-name{min-width:0;align-self:center}.complete-stats{min-width:0}
 .complete-rank-row.first-place .complete-place,.complete-rank-row.first-place .complete-name{color:var(--color-match-tint-text)}.complete-stats>span{color:var(--accent-ink)}
+
+/* Enforce final rankings as a single horizontal row on normal widths. */
+.complete-rank-row{display:flex!important;align-items:center;gap:12px;flex-wrap:nowrap!important;min-width:0}
+.complete-identity{display:flex;align-items:center;gap:12px;min-width:0;flex:1 1 auto}
+.complete-stats{display:flex!important;align-items:center;gap:7px;flex:0 0 auto;min-width:0;flex-wrap:nowrap!important;margin-left:auto}
+.complete-stats>span{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
+@media(max-width:700px){
+  .complete-rank-row{flex-wrap:wrap!important;align-items:flex-start}
+  .complete-identity{flex:1 1 auto;min-width:0}
+  .complete-stats{flex:0 1 100%;margin-left:0;flex-wrap:wrap!important;justify-content:flex-start}
+}
