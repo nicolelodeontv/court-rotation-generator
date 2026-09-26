@@ -86,9 +86,6 @@ body.court-mode #liveView .live-grid{display:block}
 .rank-row.first-place .rank-stats .rank-pct{color:var(--color-text)}
 .rank-row:not(.first-place) .rank-stats .rank-chip{color:var(--accent-ink)}
 
-      .player-name-rating{gap:7px}
-}
-
 /* Revised Feature 13: hide the Setup navigation entry after generation. */
 #setupNavBtn[hidden]{display:none!important}
 body.setup-nav-hidden .bottom-nav{grid-template-columns:repeat(5,minmax(0,1fr))}
