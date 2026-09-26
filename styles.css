@@ -111,8 +111,24 @@ body.setup-nav-hidden .bottom-nav{grid-template-columns:repeat(5,minmax(0,1fr))}
 
 /* Feature 17: pin the existing navigation in the top-right on desktop. */
 @media(min-width:1000px){
-  body{padding-top:88px}
-  .bottom-nav{top:14px;right:14px;bottom:auto;left:auto;transform:none;z-index:60;width:min(780px,calc(100vw - 28px))}
+  body{padding-top:20px}
+  .bottom-nav{
+    top:20px;
+    right:max(var(--gutter),calc((100vw - var(--content))/2 + var(--gutter)));
+    bottom:auto;
+    left:auto;
+    transform:none;
+    z-index:60;
+    width:max-content;
+    max-width:calc(100vw - 2 * var(--gutter));
+    grid-template-columns:repeat(6,max-content)
+  }
+  #liveView .live-grid{grid-template-columns:minmax(0,1.15fr) minmax(300px,max-content)}
+  #liveView .live-upnext-column{justify-self:end;width:max-content;max-width:100%}
+  #liveView .live-upnext-column>.upnext{width:max-content;max-width:100%}
+  #liveView .upnext-list{width:max-content;max-width:100%}
+  #liveView .upnext-list .next-item{width:max-content;max-width:100%;min-width:300px}
+  #liveView .upnext-list .next-item>span:nth-child(2){min-width:0}
 }
 @media(min-width:768px) and (max-width:999px){
   .bottom-nav{top:auto;right:auto;bottom:14px;left:50%;transform:translateX(-50%);z-index:60}
