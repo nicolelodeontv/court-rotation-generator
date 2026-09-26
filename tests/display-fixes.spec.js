@@ -336,6 +336,8 @@ test('current-game bar, Up Next width, and fixed header navigation stay aligned'
   expect(Math.abs(bounds.navRight - bounds.appRight)).toBeLessThanOrEqual(1);
   expect(bounds.navPosition).toBe('fixed');
   expect(bounds.navBottomStyle).toBe('auto');
+  expect(await page.locator('.bottom-nav').evaluate(node => getComputedStyle(node).columnGap)).toBe('14px');
+  expect(await page.locator('.bottom-nav').evaluate(node => node.parentElement === document.body)).toBeTruthy();
   expect(bounds.addVisible).toBeTruthy();
   expect(bounds.courtVisible).toBeTruthy();
 
@@ -377,9 +379,41 @@ test('Complete game uses a separate score step and blocks a contradictory winner
   await page.locator('#scoreB').fill('7');
   await page.locator('#scoreConfirm').click();
   await expect(page.locator('#matchLogCount')).toHaveText('1');
-  await expect(page.locator('.match-log-result')).toContainText('Team A won · 11-7');
+  await expect(page.locator('.match-log-result')).toContainText('Player 1 and Player 2 won · 11-7');
+  await expect(page.locator('.match-log-result')).not.toContainText('⭐');
 });
 
+test('Win by 2 toggle persists across games and validates deuce scores', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+  await page.locator('#playerPasteBtn').click();
+  await page.locator('#pastePlayerNames').fill(roster(8));
+  await page.locator('#playerConfirm').click();
+  await page.locator('#generateBtn').click();
+  await expect(page.locator('.game-match')).toHaveCount(12, { timeout: 5000 });
+
+  await page.locator('#completeBtn').click();
+  await page.locator('[data-winner="0"]').click();
+  await expect(page.locator('#winByTwoToggle')).toBeChecked();
+  await page.locator('#scoreA').fill('11');
+  await page.locator('#scoreB').fill('10');
+  await page.locator('#scoreConfirm').click();
+  await expect(page.locator('#scoreError')).toContainText('At 10-10 or later');
+  await expect(page.locator('#matchLogCount')).toHaveText('0');
+
+  await page.locator('#winByTwoToggle').uncheck();
+  await page.locator('#scoreConfirm').click();
+  await expect(page.locator('#matchLogCount')).toHaveText('1');
+
+  await page.locator('#completeBtn').click();
+  await page.locator('[data-winner="0"]').click();
+  await expect(page.locator('#winByTwoToggle')).not.toBeChecked();
+  await page.locator('#scoreA').fill('11');
+  await page.locator('#scoreB').fill('10');
+  await page.locator('#scoreConfirm').click();
+  await expect(page.locator('#matchLogCount')).toHaveText('2');
+});
 test('Next game free swap commits the generated game unchanged without validation blocking', async ({ page }) => {
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
