@@ -243,33 +243,37 @@ test('Live uses two columns on desktop, stacks on mobile, and rankings stay sing
 });
 
 
-test('winner row inversion, player stars, singular games label, and setup collapse', async ({ page }) => {
+test('winner row inversion, player stars, singular games label, and setup nav visibility', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
 
+  await expect(page.locator('#setupNavBtn')).toBeVisible();
   await page.locator('#playerPasteBtn').click();
   await page.locator('#pastePlayerNames').fill(roster(4));
   await page.locator('#playerConfirm').click();
   await page.locator('#generateBtn').click();
   await expect(page.locator('.game-match')).toHaveCount(1, { timeout: 5000 });
 
-  await expect(page.locator('#setupSummary')).toBeVisible();
-  await expect(page.locator('#setupView')).toHaveClass(/setup-collapsed/);
-  await expect(page.locator('#setupSummaryText')).toContainText('4 players');
-  await expect(page.locator('#setupSummaryToggle')).toHaveText('Edit setup ▾');
+  await expect(page.locator('#setupNavBtn')).toBeHidden();
+  await expect(page.locator('[data-view="liveView"]')).toHaveClass(/active/);
+  await expect(page.locator('.bottom-nav .nav-btn')).toHaveCount(5);
+  await expect(page.locator('.bottom-nav')).toHaveCSS('grid-template-columns', /repeat\(5,/);
 
-  await page.locator('#setupSummaryToggle').click();
-  await expect(page.locator('#setupView')).not.toHaveClass(/setup-collapsed/);
-  await page.locator('#games').fill('2');
-  await expect(page.locator('#setupRegenerateBtn')).toBeVisible();
-  await expect(page.locator('#setupSummary')).toContainText('Changes require a new rotation.');
+  await page.locator('[data-view="moreView"]').click();
+  await page.locator('#manageSessionBtn').click();
+  await expect(page.locator('#setupView')).toHaveClass(/active/);
+  await expect(page.locator('#setupView .grid-setup')).toBeVisible();
+  await expect(page.locator('#setupSummary')).toHaveCount(0);
+
+  await page.locator('#games').fill('1');
+  await expect(page.locator('#setupView .grid-setup')).toBeVisible();
 
   await page.locator('[data-view="playersView"]').click();
   const playerCard = page.locator('.player-card').first();
   await expect(playerCard.locator('.player-name-rating')).toBeVisible();
   await expect(playerCard.locator('.player-skill-stars')).toHaveText(/⭐{1,6}/);
-  await expect(playerCard.locator('.stat-chip').first()).toContainText('game');
+  await expect(playerCard.locator('.stat-chip').first()).toContainText('1 game');
 
   await page.locator('[data-view="liveView"]').click();
   await page.locator('#completeBtn').click();
@@ -287,23 +291,17 @@ test('winner row inversion, player stars, singular games label, and setup collap
       chipBackgrounds: chips.map(style => style.backgroundColor),
       chipColors: chips.map(style => style.color),
       gameChip: row.querySelector('.complete-games-played')?.textContent || '',
-      rowDisplay: rowStyle.display,
-      rowWrap: rowStyle.flexWrap,
-      identityTop: row.querySelector('.complete-identity')?.getBoundingClientRect().top,
-      placeTop: row.querySelector('.complete-place')?.getBoundingClientRect().top,
-      nameTop: row.querySelector('.complete-name')?.getBoundingClientRect().top,
-      chipsTop: row.querySelector('.complete-stats')?.getBoundingClientRect().top,
+      display: rowStyle.display,
+      wrap: rowStyle.flexWrap,
     };
   });
-  expect(modalStyles.background).not.toBe('rgb(55, 64, 48)');
+  expect(modalStyles.background).toBe('rgb(184, 166, 123)');
   expect(modalStyles.color).toBe('rgb(42, 51, 40)');
   expect(modalStyles.chipBackgrounds.every(value => value === 'rgb(42, 51, 40)')).toBeTruthy();
   expect(modalStyles.chipColors.every(value => value === 'rgb(239, 234, 221)')).toBeTruthy();
   expect(modalStyles.gameChip).toBe('1 game');
-  expect(modalStyles.rowDisplay).toBe('flex');
-  expect(modalStyles.rowWrap).toBe('nowrap');
-  expect(Math.abs(modalStyles.placeTop - modalStyles.nameTop)).toBeLessThan(3);
-  expect(Math.abs(modalStyles.identityTop - modalStyles.chipsTop)).toBeLessThan(3);
+  expect(modalStyles.display).toBe('flex');
+  expect(modalStyles.wrap).toBe('nowrap');
 
   await page.locator('#completeCloseBtn').click();
   await page.locator('[data-view="rankingsView"]').click();
@@ -317,8 +315,21 @@ test('winner row inversion, player stars, singular games label, and setup collap
     chipBackground: getComputedStyle(row.querySelector('.rank-chip')).backgroundColor,
     chipText: getComputedStyle(row.querySelector('.rank-chip')).color,
   }));
-  expect(ranksStyles.background).not.toBe('rgb(55, 64, 48)');
+  expect(ranksStyles.background).toBe('rgb(184, 166, 123)');
   expect(ranksStyles.text).toBe('rgb(42, 51, 40)');
   expect(ranksStyles.chipBackground).toBe('rgb(42, 51, 40)');
   expect(ranksStyles.chipText).toBe('rgb(239, 234, 221)');
+
+  await page.reload();
+  await expect(page.locator('#setupNavBtn')).toBeHidden();
+  await expect(page.locator('.bottom-nav .nav-btn')).toHaveCount(5);
+
+  await page.locator('[data-view="moreView"]').click();
+  await page.locator('#manageSessionBtn').click();
+  await page.locator('#clearAllPlayersBtn').click();
+  await expect(page.locator('#setupNavBtn')).toBeVisible();
+  await expect(page.locator('.bottom-nav .nav-btn')).toHaveCount(6);
+  await expect(page.locator('#setupView')).toHaveClass(/active/);
+  await expect(page.locator('#gameMatch')).toHaveCount(0).catch?.();
 });
+
