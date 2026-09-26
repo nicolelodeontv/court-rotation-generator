@@ -271,7 +271,7 @@ test('Players tab keeps vertical spacing between identity and stat chips on desk
   }
 });
 
-test('persistent current-game bar is distinct and Up Next keeps natural content height on desktop', async ({ page }) => {
+test('current-game bar is distinct and Up Next spans the Live header to the left-column bottom', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
@@ -281,36 +281,33 @@ test('persistent current-game bar is distinct and Up Next keeps natural content 
   await page.locator('#generateBtn').click();
   await expect(page.locator('.game-match')).toHaveCount(30, { timeout: 5000 });
 
-  const styleCheck = await page.evaluate(() => {
+  const bounds = await page.evaluate(() => {
     const sticky = document.querySelector('#stickyLive');
-    const upnext = document.querySelector('#liveView .live-upnext-column > .upnext');
+    const panel = document.querySelector('#liveView .live-upnext-column > .upnext');
     const grid = document.querySelector('#liveView .live-grid');
-    const lastGame = document.querySelector('#upNextList .next-item:last-of-type');
-    const gridStyle = grid ? getComputedStyle(grid) : null;
+    const main = document.querySelector('#liveView .live-main-column');
+    const actions = document.querySelector('#liveView>.section-top>.row');
     const stickyStyle = sticky ? getComputedStyle(sticky) : null;
-    const upRect = upnext?.getBoundingClientRect();
-    const lastRect = lastGame?.getBoundingClientRect();
-    const upStyle = upnext ? getComputedStyle(upnext) : null;
+    const panelRect = panel?.getBoundingClientRect();
+    const mainRect = main?.getBoundingClientRect();
+    const actionRect = actions?.getBoundingClientRect();
+    const gridRect = grid?.getBoundingClientRect();
     return {
       stickyBackground: stickyStyle?.backgroundColor || '',
       stickyColor: stickyStyle?.color || '',
-      gridAlignItems: gridStyle?.alignItems || '',
-      upnextHeight: upRect?.height || 0,
-      upnextTop: upRect?.top || 0,
-      lastGameBottom: lastRect?.bottom || 0,
-      upnextPaddingBottom: parseFloat(upStyle?.paddingBottom || '0'),
-      upnextBorderBottom: parseFloat(upStyle?.borderBottomWidth || '0'),
+      panelTop: panelRect?.top || 0,
+      panelBottom: panelRect?.bottom || 0,
+      actionTop: actionRect?.top || 0,
+      mainBottom: mainRect?.bottom || 0,
+      gridTop: gridRect?.top || 0,
     };
   });
 
-  expect(styleCheck.stickyBackground).toBe('rgb(111, 61, 42)');
-  expect(styleCheck.stickyColor).toBe('rgb(239, 234, 221)');
-  expect(styleCheck.gridAlignItems).toBe('start');
-
-  const cardBox = await page.locator('#liveView .live-upnext-column > .upnext').boundingBox();
-  if (!cardBox) throw new Error('Could not measure Up Next card');
-  const trailingSpace = styleCheck.upnextHeight - (styleCheck.lastGameBottom - cardBox.y);
-  expect(Math.abs(trailingSpace - styleCheck.upnextPaddingBottom - styleCheck.upnextBorderBottom)).toBeLessThan(2);
+  expect(bounds.stickyBackground).toBe('rgb(111, 61, 42)');
+  expect(bounds.stickyColor).toBe('rgb(239, 234, 221)');
+  expect(Math.abs(bounds.panelTop - bounds.actionTop)).toBeLessThanOrEqual(1);
+  expect(Math.abs(bounds.panelBottom - bounds.mainBottom)).toBeLessThanOrEqual(1);
+  expect(bounds.panelTop).toBeLessThan(bounds.gridTop);
 });
 
 test('Next game free swap commits the generated game unchanged without validation blocking', async ({ page }) => {
