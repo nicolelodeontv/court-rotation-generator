@@ -213,6 +213,9 @@ test('Match log team names stay on one compact flex row per team', async ({ page
 
   await page.locator('#completeBtn').click();
   await page.locator('[data-winner="0"]').click();
+  await page.locator('#scoreA').fill('11');
+  await page.locator('#scoreB').fill('7');
+  await page.locator('#scoreConfirm').click();
   await expect(page.locator('.match-log-entry')).toHaveCount(1);
 
   const teams = await page.locator('.match-log-entry .match-log-team').evaluateAll(nodes => nodes.map(node => {
@@ -271,7 +274,7 @@ test('Players tab keeps vertical spacing between identity and stat chips on desk
   }
 });
 
-test('current-game bar is distinct and Up Next spans the Live header to the left-column bottom', async ({ page }) => {
+test('current-game bar and Up Next align with the Live content row', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
@@ -286,28 +289,75 @@ test('current-game bar is distinct and Up Next spans the Live header to the left
     const panel = document.querySelector('#liveView .live-upnext-column > .upnext');
     const grid = document.querySelector('#liveView .live-grid');
     const main = document.querySelector('#liveView .live-main-column');
-    const actions = document.querySelector('#liveView>.section-top>.row');
+    const addPlayer = document.querySelector('#addMidSessionPlayerBtn');
+    const courtMode = document.querySelector('#courtModeBtn');
+    const nav = document.querySelector('.bottom-nav');
     const stickyStyle = sticky ? getComputedStyle(sticky) : null;
     const panelRect = panel?.getBoundingClientRect();
     const mainRect = main?.getBoundingClientRect();
-    const actionRect = actions?.getBoundingClientRect();
     const gridRect = grid?.getBoundingClientRect();
+    const addRect = addPlayer?.getBoundingClientRect();
+    const courtRect = courtMode?.getBoundingClientRect();
+    const navStyle = nav ? getComputedStyle(nav) : null;
     return {
       stickyBackground: stickyStyle?.backgroundColor || '',
       stickyColor: stickyStyle?.color || '',
       panelTop: panelRect?.top || 0,
       panelBottom: panelRect?.bottom || 0,
-      actionTop: actionRect?.top || 0,
-      mainBottom: mainRect?.bottom || 0,
       gridTop: gridRect?.top || 0,
+      mainBottom: mainRect?.bottom || 0,
+      addVisible: !!addRect && addRect.width > 0 && addRect.height > 0,
+      courtVisible: !!courtRect && courtRect.width > 0 && courtRect.height > 0,
+      navPosition: navStyle?.position || '',
+      navTop: nav?.getBoundingClientRect().top || 0,
+      navBottomStyle: navStyle?.bottom || '',
     };
   });
 
   expect(bounds.stickyBackground).toBe('rgb(111, 61, 42)');
   expect(bounds.stickyColor).toBe('rgb(239, 234, 221)');
-  expect(Math.abs(bounds.panelTop - bounds.actionTop)).toBeLessThanOrEqual(1);
+  expect(Math.abs(bounds.panelTop - bounds.gridTop)).toBeLessThanOrEqual(1);
   expect(Math.abs(bounds.panelBottom - bounds.mainBottom)).toBeLessThanOrEqual(1);
-  expect(bounds.panelTop).toBeLessThan(bounds.gridTop);
+  expect(bounds.addVisible).toBeTruthy();
+  expect(bounds.courtVisible).toBeTruthy();
+  expect(bounds.navPosition).toBe('fixed');
+  expect(bounds.navBottomStyle).toBe('auto');
+  expect(bounds.navTop).toBeGreaterThanOrEqual(0);
+});
+
+test('Complete game uses a separate score step and blocks a contradictory winner score', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+  await page.locator('#playerPasteBtn').click();
+  await page.locator('#pastePlayerNames').fill(roster(4));
+  await page.locator('#playerConfirm').click();
+  await page.locator('#generateBtn').click();
+  await expect(page.locator('.game-match')).toHaveCount(1, { timeout: 5000 });
+
+  await page.locator('#completeBtn').click();
+  await expect(page.locator('.sheet-title')).toHaveText('Game 1 result');
+  await page.locator('[data-winner="0"]').click();
+  await expect(page.locator('.sheet-title')).toHaveText('Enter score');
+  await expect(page.locator('.winner-badge')).toHaveText('✓ Winner');
+  await expect(page.locator('#matchLogCount')).toHaveText('0');
+  await page.locator('#scoreA').fill('5');
+  await page.locator('#scoreB').fill('11');
+  await page.locator('#scoreConfirm').click();
+  await expect(page.locator('#scoreError')).toHaveText('The selected winner cannot have a lower score than the other team.');
+  await expect(page.locator('#matchLogCount')).toHaveText('0');
+
+  await page.locator('#scoreBack').click();
+  await expect(page.locator('.sheet-title')).toHaveText('Game 1 result');
+  await expect(page.locator('[data-winner="0"]')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('[data-winner="1"]')).toBeVisible();
+
+  await page.locator('[data-winner="0"]').click();
+  await page.locator('#scoreA').fill('11');
+  await page.locator('#scoreB').fill('7');
+  await page.locator('#scoreConfirm').click();
+  await expect(page.locator('#matchLogCount')).toHaveText('1');
+  await expect(page.locator('.match-log-result')).toContainText('Team A won · 11-7');
 });
 
 test('Next game free swap commits the generated game unchanged without validation blocking', async ({ page }) => {
@@ -373,6 +423,9 @@ test('Ranks tab uses the shared medal placement labels', async ({ page }) => {
   await page.locator('#generateBtn').click();
   await page.locator('#completeBtn').click();
   await page.locator('[data-winner="0"]').click();
+  await page.locator('#scoreA').fill('11');
+  await page.locator('#scoreB').fill('7');
+  await page.locator('#scoreConfirm').click();
   await page.locator('[data-view="rankingsView"]').click();
   await expect(page.locator('.rank-row').first()).toBeVisible();
   const labels = await page.locator('.rank-pos').allTextContents();
@@ -432,6 +485,9 @@ test('Live uses two columns on desktop, stacks on mobile, and rankings stay sing
   for (let i = 0; i < 12; i++) {
     await page.locator('#completeBtn').click();
     await page.locator('[data-winner="0"]').click();
+  await page.locator('#scoreA').fill('11');
+  await page.locator('#scoreB').fill('7');
+  await page.locator('#scoreConfirm').click();
   }
   await expect(page.locator('.sheet.final-rankings')).toBeVisible();
   const finalRows = await page.locator('.complete-rank-row').evaluateAll(rows => rows.map(row => {
@@ -512,6 +568,9 @@ test('winner row inversion, player stars, singular games label, and setup nav vi
   await page.locator('[data-view="liveView"]').click();
   await page.locator('#completeBtn').click();
   await page.locator('[data-winner="0"]').click();
+  await page.locator('#scoreA').fill('11');
+  await page.locator('#scoreB').fill('7');
+  await page.locator('#scoreConfirm').click();
   await expect(page.locator('.sheet.final-rankings')).toBeVisible();
 
   const firstModal = page.locator('.complete-rank-row').first();
