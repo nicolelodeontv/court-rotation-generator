@@ -83,7 +83,7 @@ body.court-mode #liveView .live-share-row>.btn{width:100%;margin:0}
 
 
 /* Up Next drag-and-drop reordering. */
-.upnext-list .next-item{position:relative;touch-action:pan-y;user-select:none}
+.upnext-list .next-item{position:relative;touch-action:pan-y;user-select:none;transition:transform .14s ease,opacity .14s ease}
 .upnext-list .next-item[tabindex="0"]{cursor:grab}
 .upnext-list .next-item[tabindex="0"]:active{cursor:grabbing}
 .upnext-list .next-item:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 35%,transparent);outline-offset:2px}
