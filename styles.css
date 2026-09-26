@@ -24,7 +24,7 @@
 @media(min-width:768px){
   #liveView .live-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);gap:var(--section-gap);align-items:start}
   #liveView .live-upnext-column{align-self:start;height:max-content}
-  #liveView .live-upnext-column>.upnext{margin-top:calc(-1 * var(--upnext-top-offset, 0px));align-self:flex-start;height:var(--upnext-panel-height, max-content);flex:0 0 auto}
+  #liveView .live-upnext-column>.upnext{margin-top:0;align-self:flex-start;height:var(--upnext-panel-height, max-content);flex:0 0 auto}
   #liveView .live-main-column,#liveView .live-upnext-column{display:flex;flex-direction:column;min-width:0}
 }
 @media(max-width:767px){
@@ -94,4 +94,29 @@ body.setup-nav-hidden .bottom-nav{grid-template-columns:repeat(5,minmax(0,1fr))}
   body.setup-nav-hidden .bottom-nav{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
   body.setup-nav-hidden .nav-btn{padding-inline:3px;font-size:11px}
   body.setup-nav-hidden .nav-btn span{font-size:8px}
+}
+
+
+/* Feature 16: score-entry step stays within the existing dark result-sheet treatment. */
+.score-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px}
+.score-team{min-width:0;padding:12px;border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--surface-2)}
+.score-team.selected-winner{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 18%,transparent)}
+.score-team-label{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;color:var(--text);font:900 13px/1.25 var(--font-body)}
+.score-team-label>span:first-child{min-width:0;overflow-wrap:anywhere}
+.winner-badge{flex:0 0 auto;padding:4px 7px;border:1px solid var(--accent-border);border-radius:999px;background:var(--accent-surface);color:var(--accent-ink);font:900 9px/1 var(--font-body);white-space:nowrap}
+.score-input-label{margin-top:10px;color:var(--muted);font-size:11px;font-weight:800}
+.score-input{margin-top:6px!important;text-align:center;font-size:20px!important;font-weight:900}
+.score-input[aria-invalid="true"]{border-color:var(--danger);box-shadow:0 0 0 3px color-mix(in srgb,var(--danger) 14%,transparent)}
+@media(max-width:700px){.score-grid{grid-template-columns:1fr}}
+
+/* Feature 17: pin the existing navigation in the top-right on desktop. */
+@media(min-width:1000px){
+  body{padding-top:88px}
+  .bottom-nav{top:14px;right:14px;bottom:auto;left:auto;transform:none;z-index:60;width:min(780px,calc(100vw - 28px))}
+}
+@media(min-width:768px) and (max-width:999px){
+  .bottom-nav{top:auto;right:auto;bottom:14px;left:50%;transform:translateX(-50%);z-index:60}
+}
+@media(max-width:767px){
+  .bottom-nav{top:auto;right:auto;bottom:8px;left:50%;transform:translateX(-50%);z-index:60}
 }
