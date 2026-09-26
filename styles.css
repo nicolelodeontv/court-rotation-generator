@@ -86,18 +86,14 @@ body.court-mode #liveView .live-grid{display:block}
 .rank-row.first-place .rank-stats .rank-pct{color:var(--color-text)}
 .rank-row:not(.first-place) .rank-stats .rank-chip{color:var(--accent-ink)}
 
-.setup-summary{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 var(--section-gap);padding:11px 13px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md)}
-.setup-summary-copy{display:flex;align-items:center;gap:9px;min-width:0;flex-wrap:wrap}
-.setup-summary-copy b{font:700 13px/1.3 var(--font-body);min-width:0}
-.setup-summary-note{display:none;color:var(--muted);font-size:11px}
-.setup-summary.has-changes .setup-summary-note{display:inline}
-.setup-summary-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
-.setup-summary-actions .btn{margin-top:0}
-#setupView.setup-collapsed .grid-setup{display:none}
-#setupView.setup-collapsed #setupStatus{display:none}
+      .player-name-rating{gap:7px}
+}
+
+/* Revised Feature 13: hide the Setup navigation entry after generation. */
+#setupNavBtn[hidden]{display:none!important}
+body.setup-nav-hidden .bottom-nav{grid-template-columns:repeat(5,minmax(0,1fr))}
 @media(max-width:700px){
-  .setup-summary{align-items:flex-start;flex-direction:column}
-  .setup-summary-actions{width:100%;justify-content:stretch}
-  .setup-summary-actions .btn{flex:1 1 0}
-  .player-name-rating{gap:7px}
+  body.setup-nav-hidden .bottom-nav{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+  body.setup-nav-hidden .nav-btn{padding-inline:3px;font-size:11px}
+  body.setup-nav-hidden .nav-btn span{font-size:8px}
 }
