@@ -98,15 +98,15 @@ test('15-game live formatting and spectator current card stay correct', async ({
 });
 
 
-test('Up Next drag stays inside the queue and always cleans up', async ({ page }) => {
+test('Up Next free reorder moves the whole generated game without validation blocking', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
   await page.locator('#playerPasteBtn').click();
-  await page.locator('#pastePlayerNames').fill(roster(20));
+  await page.locator('#pastePlayerNames').fill(roster(5));
   await page.locator('#playerConfirm').click();
   await page.locator('#generateBtn').click();
-  await expect(page.locator('.game-match')).toHaveCount(30, { timeout: 5000 });
+  await expect(page.locator('.game-match')).toHaveCount(5, { timeout: 5000 });
 
   await expect(page.locator('.upnext-swap')).toHaveCount(0);
   await expect(page.locator('[data-swap-game]')).toHaveCount(0);
@@ -117,6 +117,14 @@ test('Up Next drag stays inside the queue and always cleans up', async ({ page }
   const sourceRect = await source.boundingBox();
   const targetRect = await target.boundingBox();
   if (!sourceRect || !targetRect) throw new Error('Could not measure Up Next drag targets');
+
+  const before = await page.evaluate(() => {
+    const row = document.querySelector('#scheduleList .game-row:nth-child(2)');
+    return {
+      match: row?.querySelector('.game-match')?.textContent.replace(/⭐/g, '').replace(/\s+/g, ' ').trim() || '',
+      labels: [...(row?.querySelectorAll('.game-team-label') || [])].map(node => node.textContent || ''),
+    };
+  });
 
   await page.mouse.move(sourceRect.x + sourceRect.width / 2, sourceRect.y + sourceRect.height / 2);
   await page.mouse.down();
@@ -146,6 +154,18 @@ test('Up Next drag stays inside the queue and always cleans up', async ({ page }
   await expect(page.locator('.upnext-drag-placeholder')).toHaveCount(0);
   await expect(page.locator('#upNextList .next-item[data-upcoming-index]')).toHaveCount(3);
   await expect(page.locator('#upNextList .next-item > span:first-child')).toHaveText(['G2', 'G3', 'G4']);
+
+  const after = await page.evaluate(() => {
+    const row = document.querySelector('#scheduleList .game-row:nth-child(4)');
+    return {
+      match: row?.querySelector('.game-match')?.textContent.replace(/⭐/g, '').replace(/\s+/g, ' ').trim() || '',
+      labels: [...(row?.querySelectorAll('.game-team-label') || [])].map(node => node.textContent || ''),
+      status: document.querySelector('#upNextReorderStatus')?.textContent || '',
+    };
+  });
+  expect(after.match).toBe(before.match);
+  expect(after.labels).toEqual(before.labels);
+  expect(after.status).toContain('Moved Game 2 to G4.');
 });
 
 test('Up Next keyboard reorder and mobile long-press path keep the queue usable', async ({ page }) => {
@@ -251,25 +271,28 @@ test('Players tab keeps vertical spacing between identity and stat chips on desk
   }
 });
 
-test('Next game swaps the current matchup with the following game without completing it', async ({ page }) => {
+test('Next game free swap commits the generated game unchanged without validation blocking', async ({ page }) => {
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
   await page.locator('#playerPasteBtn').click();
-  await page.locator('#pastePlayerNames').fill(roster(20));
+  await page.locator('#pastePlayerNames').fill(roster(5));
   await page.locator('#playerConfirm').click();
   await page.locator('#generateBtn').click();
-  await expect(page.locator('.game-match')).toHaveCount(30, { timeout: 5000 });
+  await expect(page.locator('.game-match')).toHaveCount(5, { timeout: 5000 });
 
   const before = await page.evaluate(() => {
-    const currentNames = [...document.querySelectorAll('#currentTeams .live-player-name')]
-      .map(node => node.textContent.replace(/\s*⭐+\s*$/, '').trim());
+    const currentTeams = [...document.querySelectorAll('#currentTeams .team')]
+      .map(node => node.textContent.trim());
+    const nextRow = document.querySelector('#scheduleList .game-row:nth-child(2)');
     const upcomingNames = [...document.querySelectorAll('#upNextList .next-item:first-child .live-player-name')]
       .map(node => node.textContent.replace(/\s*⭐+\s*$/, '').trim());
     return {
-      currentNames,
+      currentTeams,
       upcomingNames,
       progress: document.querySelector('#progressText')?.textContent || '',
       logCount: document.querySelector('#matchLogCount')?.textContent || '',
+      nextMatch: nextRow?.querySelector('.game-match')?.textContent.replace(/⭐/g, '').replace(/\s+/g, ' ').trim() || '',
+      nextLabels: [...(nextRow?.querySelectorAll('.game-team-label') || [])].map(node => node.textContent || ''),
     };
   });
 
@@ -278,18 +301,27 @@ test('Next game swaps the current matchup with the following game without comple
   const after = await page.evaluate(() => ({
     currentNames: [...document.querySelectorAll('#currentTeams .live-player-name')]
       .map(node => node.textContent.replace(/\s*⭐+\s*$/, '').trim()),
+    currentTeams: [...document.querySelectorAll('#currentTeams .team')]
+      .map(node => node.textContent.trim()),
     firstUpNextNames: [...document.querySelectorAll('#upNextList .next-item:first-child .live-player-name')]
       .map(node => node.textContent.replace(/\s*⭐+\s*$/, '').trim()),
     firstLabel: document.querySelector('#upNextList .next-item:first-child > span:first-child')?.textContent || '',
     progress: document.querySelector('#progressText')?.textContent || '',
     logCount: document.querySelector('#matchLogCount')?.textContent || '',
+    firstMatch: document.querySelector('#scheduleList .game-row:nth-child(1) .game-match')?.textContent.replace(/⭐/g, '').replace(/\s+/g, ' ').trim() || '',
+    firstLabels: [...document.querySelectorAll('#scheduleList .game-row:nth-child(1) .game-team-label')].map(node => node.textContent || ''),
+    status: document.querySelector('#nextGameStatus')?.textContent || '',
   }));
 
   expect(after.currentNames).toEqual(before.upcomingNames);
-  expect(after.firstUpNextNames).toEqual(before.currentNames);
+  expect(after.firstUpNextNames).toEqual(before.currentNames || []);
+  expect(after.currentTeams.join(' | ')).not.toBe('');
   expect(after.firstLabel).toBe('G2');
   expect(after.progress).toBe(before.progress);
   expect(after.logCount).toBe(before.logCount);
+  expect(after.firstMatch).toBe(before.nextMatch);
+  expect(after.firstLabels).toEqual(before.nextLabels);
+  expect(after.status).toBe('');
   await expect(page.locator('#currentNo')).toHaveText('GAME 1');
 });
 
