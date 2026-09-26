@@ -98,7 +98,8 @@ test('15-game live formatting and spectator current card stay correct', async ({
 });
 
 
-test('Up Next uses drag handles and keyboard reordering instead of swap buttons', async ({ page }) => {
+test('Up Next drag stays inside the queue and always cleans up', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
   await page.locator('#playerPasteBtn').click();
@@ -110,26 +111,77 @@ test('Up Next uses drag handles and keyboard reordering instead of swap buttons'
   await expect(page.locator('.upnext-swap')).toHaveCount(0);
   await expect(page.locator('[data-swap-game]')).toHaveCount(0);
   await expect(page.locator('#upNextList .drag-handle')).toHaveCount(3);
-  await expect(page.locator('#upNextList .next-item[data-upcoming-index]')).toHaveCount(3);
 
-  const handleStyle = await page.locator('#upNextList .drag-handle').first().evaluate(node => {
-    const style = getComputedStyle(node);
-    return { position: style.position, cursor: style.cursor };
+  const source = page.locator('#upNextList .next-item[data-upcoming-index="1"]');
+  const target = page.locator('#upNextList .next-item[data-upcoming-index="3"]');
+  const sourceRect = await source.boundingBox();
+  const targetRect = await target.boundingBox();
+  if (!sourceRect || !targetRect) throw new Error('Could not measure Up Next drag targets');
+
+  await page.mouse.move(sourceRect.x + sourceRect.width / 2, sourceRect.y + sourceRect.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(targetRect.x + targetRect.width / 2, targetRect.y + 4, { steps: 8 });
+
+  await expect.poll(() => page.locator('.upnext-dragging-card').count()).toBe(1);
+  const dragState = await page.locator('.upnext-dragging-card').evaluate(card => {
+    const list = document.querySelector('#upNextList');
+    const cr = card.getBoundingClientRect();
+    const lr = list?.getBoundingClientRect();
+    return {
+      parentId: card.parentElement?.id || '',
+      position: getComputedStyle(card).position,
+      leftInside: !!lr && cr.left >= lr.left - 1 && cr.right <= lr.right + 1,
+      topInside: !!lr && cr.top >= lr.top - 1 && cr.bottom <= lr.bottom + 1,
+      placeholder: !!list?.querySelector('.upnext-drag-placeholder'),
+    };
   });
-  expect(handleStyle.position).toBe('absolute');
-  expect(handleStyle.cursor).toContain('grab');
+  expect(dragState.parentId).toBe('upNextList');
+  expect(dragState.position).toBe('absolute');
+  expect(dragState.leftInside).toBeTruthy();
+  expect(dragState.topInside).toBeTruthy();
+  expect(dragState.placeholder).toBeTruthy();
+
+  await page.mouse.up();
+  await expect(page.locator('.upnext-dragging-card')).toHaveCount(0);
+  await expect(page.locator('.upnext-drag-placeholder')).toHaveCount(0);
+  await expect(page.locator('#upNextList .next-item[data-upcoming-index]')).toHaveCount(3);
+  await expect(page.locator('#upNextList .next-item > span:first-child')).toHaveText(['G2', 'G3', 'G4']);
+});
+
+test('Up Next keyboard reorder and mobile long-press path keep the queue usable', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+  await page.locator('#playerPasteBtn').click();
+  await page.locator('#pastePlayerNames').fill(roster(20));
+  await page.locator('#playerConfirm').click();
+  await page.locator('#generateBtn').click();
+  await expect(page.locator('.game-match')).toHaveCount(30, { timeout: 5000 });
 
   await page.locator('#upNextList .next-item[data-upcoming-index="2"]').focus();
   await page.keyboard.press('ArrowUp');
-  await expect(page.locator('#upNextList .next-item')).toHaveCount(3);
-  const queue = await page.locator('#upNextList .next-item[data-upcoming-index]').evaluateAll(items =>
-    items.map(item => ({
-      source: Number(item.dataset.upcomingIndex),
-      label: item.querySelector(':scope > span')?.textContent || '',
-    }))
-  );
-  expect(queue.map(item => item.source)).toEqual([2, 1, 3]);
-  expect(queue.map(item => item.label)).toEqual(['G2', 'G3', 'G4']);
+  await expect(page.locator('#upNextList .next-item[data-upcoming-index="1"]')).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  await expect(page.locator('#setupNavBtn')).toBeHidden();
+  await page.waitForLoadState('domcontentloaded');
+
+  const card = page.locator('#upNextList .next-item[data-upcoming-index]').first();
+  await expect(card).toBeVisible();
+
+  const touchResult = await card.evaluate(async node => {
+    const rect = node.getBoundingClientRect();
+    const start = new PointerEvent('pointerdown', { bubbles: true, pointerId: 77, pointerType: 'touch', clientX: rect.left + 24, clientY: rect.top + rect.height / 2 });
+    node.dispatchEvent(start);
+    await new Promise(resolve => setTimeout(resolve, 220));
+    const dragging = document.querySelector('.upnext-dragging-card');
+    const active = !!dragging;
+    document.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 77, pointerType: 'touch', clientX: rect.left + 24, clientY: rect.top + rect.height / 2 }));
+    return active;
+  });
+  expect(touchResult).toBeTruthy();
+  await expect(page.locator('.upnext-dragging-card')).toHaveCount(0);
+  await expect(page.locator('.upnext-drag-placeholder')).toHaveCount(0);
 });
 
 test('Match log team names stay on one compact flex row per team', async ({ page }) => {
@@ -172,6 +224,34 @@ test('Match log team names stay on one compact flex row per team', async ({ page
   }
   await expect(page.locator('.match-log-result')).toContainText('Team A won');
   await expect(page.locator('.match-log-vs')).toHaveText('VS');
+});
+
+test('Players tab keeps vertical spacing between identity and stat chips on desktop and mobile', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+  await page.locator('#playerPasteBtn').click();
+  await page.locator('#pastePlayerNames').fill(roster(8));
+  await page.locator('#playerConfirm').click();
+  await page.locator('#generateBtn').click();
+  await expect(page.locator('.game-match')).toHaveCount(12, { timeout: 5000 });
+  await page.locator('[data-view="playersView"]').click();
+
+  for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport);
+    const card = page.locator('.player-card').first();
+    const spacing = await card.evaluate(node => {
+      const head = node.querySelector('.player-card-head');
+      const chips = node.querySelector('.player-meta');
+      const headRect = head?.getBoundingClientRect();
+      const chipsRect = chips?.getBoundingClientRect();
+      return {
+        marginBottom: getComputedStyle(head).marginBottom,
+        gap: headRect && chipsRect ? chipsRect.top - headRect.bottom : 0,
+      };
+    });
+    expect(spacing.marginBottom).toBe('12px');
+    expect(spacing.gap).toBeGreaterThanOrEqual(12);
+  }
 });
 
 test('Next game swaps the current matchup with the following game without completing it', async ({ page }) => {
