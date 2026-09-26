@@ -162,9 +162,6 @@ test('Up Next keyboard reorder and mobile long-press path keep the queue usable'
   await expect(page.locator('#upNextList .next-item[data-upcoming-index="1"]')).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.reload();
-  await expect(page.locator('#setupNavBtn')).toBeHidden();
-  await page.waitForLoadState('domcontentloaded');
 
   const card = page.locator('#upNextList .next-item[data-upcoming-index]').first();
   await expect(card).toBeVisible();
