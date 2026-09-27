@@ -143,3 +143,9 @@ body.setup-nav-hidden .bottom-nav{grid-template-columns:repeat(5,minmax(0,1fr))}
 #liveView .upnext-list{gap:8px!important;margin-top:8px!important}
 #liveView #upNextReorderStatus{min-height:0;margin:8px 0 0}
 #liveView #upNextReorderStatus:empty{display:none;margin:0}
+
+
+#liveView .upnext{box-sizing:border-box;padding:var(--card-pad) var(--card-pad) 8px!important}
+#liveView .upnext-list{box-sizing:border-box;margin-top:8px!important;margin-bottom:0!important;gap:8px!important}
+#liveView .upnext-list .next-item{margin:0!important}
+#liveView #upNextReorderStatus:empty{display:none!important;margin:0!important;height:0!important;min-height:0!important;padding:0!important;border:0!important}
