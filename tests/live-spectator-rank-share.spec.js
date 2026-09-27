@@ -109,9 +109,8 @@ test('Live spectator link shows canonical current game, timer, stars, and update
     teams: [...document.querySelectorAll('#currentTeams .live-player-name')].map(n => n.textContent.replace(/\s*⭐+\s*$/, '').trim()),
   }));
 
-  await page.locator('[data-view="moreView"]').click();
-  await expect(page.locator('#liveSyncBtn')).toBeVisible();
-  await page.locator('#liveSyncBtn').click();
+  await expect(page.locator('#copyLiveSpectatorBtn')).toBeVisible();
+  await page.locator('#copyLiveSpectatorBtn').click();
   const copied = await page.evaluate(() => window.__crgCopiedText);
   expect(copied).toMatch(/[?&]live=CRG-[A-Z0-9]+/);
 
@@ -163,6 +162,7 @@ test('Ranks Share results works before results and remains live after standings 
   await expect(shared.locator('.rankings-list .rank-row')).toHaveCount(4);
 
   await page.locator('#liveLeaderboardShareCloseBtn').click();
+  await page.locator('[data-view="liveView"]').click();
   await completeCurrentGame(page);
   await expect(page.locator('#currentNo')).toHaveText('GAME 2');
   await expect.poll(() => shared.locator('.live-leaderboard-empty').count(), { timeout: 7000 }).toBe(0);
