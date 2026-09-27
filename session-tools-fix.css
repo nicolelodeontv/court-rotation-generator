@@ -48,3 +48,9 @@ body.modal-open{overflow:hidden}
   .complete-identity{flex:1 1 auto;min-width:0}
   .complete-stats{flex:0 1 100%;margin-left:0;flex-wrap:wrap!important;justify-content:flex-start}
 }
+
+
+/* Feature 21: keep final rankings actions evenly split above the existing Close button. */
+.final-rankings-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:var(--section-gap);width:100%}
+.final-rankings-actions .btn{width:100%;min-width:0;margin:0;background:var(--accent);border-color:var(--accent-border);color:var(--accent-ink)}
+.final-share-status{min-height:18px;margin:8px 3px 0;text-align:center}
