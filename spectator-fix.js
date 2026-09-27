@@ -26,6 +26,7 @@ function boot(){injectStyle();transferLiveLinkButton();const spectator=new URLSe
 // Safe observer: polish is convergent; it replaces winner text once and only adds idempotent classes, so later mutations settle.
 new MutationObserver(()=>polish()).observe(document.body,{subtree:true,childList:true,characterData:true});return}
 // Live host publishing is handled by live-sync.js from canonical app state.
-// Keep this legacy module out of the host publish path to avoid DOM-snapshot races.}
+// Keep this legacy module out of the host publish path to avoid DOM-snapshot races.
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
