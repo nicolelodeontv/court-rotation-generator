@@ -102,7 +102,7 @@ async function completeCurrentGame(page) {
 
 async function currentNames(page) {
   return page.locator('#currentTeams .live-player-name').evaluateAll(nodes =>
-    nodes.map(node => (node.textContent || '').replace(/\\s*⭐+\\s*$/, '').trim())
+    nodes.map(node => (node.textContent || '').replace(/\s*⭐+\s*$/, '').trim())
   );
 }
 

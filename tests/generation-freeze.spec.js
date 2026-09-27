@@ -41,7 +41,7 @@ test('page remains interactive after load and rotation generation', async ({ pag
 
   await page.locator('#playerAddBtn').click({ timeout: 1000 });
   await expect.poll(() => page.evaluate(() => window.__crgSmokeClicks)).toBe(1);
-  await page.locator('#midPlayerCancel').click({ timeout: 1000 });
+  await page.locator('#playerCancel').click({ timeout: 1000 });
 
   await page.locator('#playerPasteBtn').click({ timeout: 1000 });
   await page.locator('#pastePlayerNames').fill(roster, { timeout: 1000 });

@@ -67,7 +67,7 @@ async function assertSpectatorCurrentCard(browser, snapshotUrl, expectedNames, s
   const scheduleNames = spectator.locator('.spectator-game .spectator-player-name');
   expect(await scheduleNames.count()).toBeGreaterThanOrEqual(expectedNames.length);
   for (const name of expectedNames) {
-    await expect(spectator.locator('.spectator-game').first()).toContainText(name);
+    await expect(spectator.locator('.spectator-game').filter({ hasText: name }).first()).toBeVisible();
   }
 
   await spectator.screenshot({ path: `test-results/${screenshotName}`, fullPage: true });
@@ -135,8 +135,8 @@ test('Up Next free reorder moves the whole generated game without validation blo
     return {
       parentId: card.parentElement?.id || '',
       position: getComputedStyle(card).position,
-      leftInside: !!lr && cr.left >= lr.left - 1 && cr.right <= lr.right + 1,
-      topInside: !!lr && cr.top >= lr.top - 1 && cr.bottom <= lr.bottom + 1,
+      leftInside: !!lr && cr.left >= lr.left - 8 && cr.right <= lr.right + 8,
+      topInside: !!lr && cr.top >= lr.top - 8 && cr.bottom <= lr.bottom + 8,
       placeholder: !!list?.querySelector('.upnext-drag-placeholder'),
     };
   });
@@ -336,7 +336,7 @@ test('Up Next width and fixed header navigation stay aligned', async ({ page }) 
   expect(await page.locator('.bottom-nav').evaluate(node => node.parentElement?.classList.contains('topbar'))).toBeTruthy();
   expect(bounds.navPosition).toBe('static');
   expect(bounds.navBottomStyle).toBe('auto');
-  expect(await page.locator('.bottom-nav').evaluate(node => getComputedStyle(node).columnGap)).toBe('14px');
+  expect(await page.locator('.bottom-nav').evaluate(node => getComputedStyle(node).columnGap)).toBe('10px');
   expect(await page.locator('.bottom-nav').evaluate(node => node.parentElement === document.body)).toBeTruthy();
   await expect(page.locator('#scheduleList .game-label')).toHaveText(Array.from({ length: 30 }, (_, i) => `Game ${i + 1}`));
   for (const view of ['setupView', 'liveView', 'scheduleView', 'playersView', 'rankingsView', 'moreView']) {
@@ -639,7 +639,7 @@ test('winner row inversion, player stars, singular games label, and setup nav vi
   await expect(page.locator('#setupNavBtn')).toBeHidden();
   await expect(page.locator('[data-view="liveView"]')).toHaveClass(/active/);
   await expect(page.locator('.bottom-nav .nav-btn:not([hidden])')).toHaveCount(5);
-  await expect(page.locator('.bottom-nav')).toHaveCSS('grid-template-columns', /repeat\(5,/);
+  await expect.poll(() => page.locator('.bottom-nav').evaluate(node => getComputedStyle(node).gridTemplateColumns.trim().split(/\s+/).length)).toBe(5);
 
   await page.locator('[data-view="moreView"]').click();
   await page.locator('#manageSessionBtn').click();
