@@ -171,3 +171,22 @@ body.setup-nav-hidden .bottom-nav{grid-template-columns:repeat(5,minmax(0,1fr))}
 }
 
 #liveView .upnext-list{gap:8px;margin-top:8px;margin-bottom:0}.upnext{padding-bottom:8px}
+
+/* Mobile navigation: keep the full six-item nav pinned to the viewport without changing its visual treatment. */
+@media(max-width:700px){
+  body{padding-bottom:76px}
+  .bottom-nav{
+    position:fixed;
+    left:var(--gutter);
+    right:var(--gutter);
+    bottom:8px;
+    width:auto;
+    max-width:none;
+    z-index:50;
+    grid-template-columns:repeat(6,minmax(0,1fr));
+  }
+  #setupNavBtn[hidden]{display:flex!important}
+  body.setup-nav-hidden .bottom-nav{grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
+  body.setup-nav-hidden .nav-btn{padding:8px 4px;font-size:12px}
+  body.setup-nav-hidden .nav-btn span{font-size:9px}
+}

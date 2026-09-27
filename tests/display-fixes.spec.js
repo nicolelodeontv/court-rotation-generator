@@ -165,7 +165,7 @@ test('Up Next free reorder moves the whole generated game without validation blo
   expect(after.status).toContain('Moved Game 2 to Game 4.');
 });
 
-test('Up Next keyboard reorder and mobile long-press path keep the queue usable', async ({ page }) => {
+test('Up Next keyboard reorder and mobile handle drag path keep the queue usable', async ({ page }) => {
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
   await page.locator('#playerPasteBtn').click();
@@ -184,13 +184,31 @@ test('Up Next keyboard reorder and mobile long-press path keep the queue usable'
   await expect(card).toBeVisible();
 
   const touchResult = await card.evaluate(async node => {
-    const rect = node.getBoundingClientRect();
-    const start = new PointerEvent('pointerdown', { bubbles: true, pointerId: 77, pointerType: 'touch', clientX: rect.left + 24, clientY: rect.top + rect.height / 2 });
-    node.dispatchEvent(start);
-    await new Promise(resolve => setTimeout(resolve, 220));
-    const dragging = document.querySelector('.upnext-dragging-card');
-    const active = !!dragging;
-    document.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 77, pointerType: 'touch', clientX: rect.left + 24, clientY: rect.top + rect.height / 2 }));
+    const handle = node.querySelector('.drag-handle');
+    if (!handle) throw new Error('missing drag handle');
+    const rect = handle.getBoundingClientRect();
+    handle.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      pointerId: 77,
+      pointerType: 'touch',
+      clientX: rect.left + rect.width / 2,
+      clientY: rect.top + rect.height / 2,
+    }));
+    document.dispatchEvent(new PointerEvent('pointermove', {
+      bubbles: true,
+      pointerId: 77,
+      pointerType: 'touch',
+      clientX: rect.left + rect.width / 2,
+      clientY: rect.top + rect.height / 2 + 24,
+    }));
+    const active = !!document.querySelector('.upnext-dragging-card');
+    document.dispatchEvent(new PointerEvent('pointercancel', {
+      bubbles: true,
+      pointerId: 77,
+      pointerType: 'touch',
+      clientX: rect.left + rect.width / 2,
+      clientY: rect.top + rect.height / 2 + 24,
+    }));
     return active;
   });
   expect(touchResult).toBeTruthy();
