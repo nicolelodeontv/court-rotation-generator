@@ -54,3 +54,26 @@ body.modal-open{overflow:hidden}
 .final-rankings-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:var(--section-gap);width:100%}
 .final-rankings-actions .btn{width:100%;min-width:0;margin:0;background:var(--accent);border-color:var(--accent-border);color:var(--accent-ink)}
 .final-share-status{min-height:18px;margin:8px 3px 0;text-align:center}
+
+
+/* Feature 23: QR + copy-link popup and public read-only results view. */
+.sheet.final-share .sheet-panel{max-width:560px}
+.final-results-qr{display:flex;align-items:center;justify-content:center;margin:14px auto;padding:12px;width:min(320px,100%);background:#fff;border:1px solid var(--line);border-radius:var(--radius-lg)}
+.final-results-qr svg{display:block;width:100%;height:auto;max-width:292px}
+.final-results-qr-error{padding:28px 14px;text-align:center;color:var(--danger-soft);font:800 12px/1.4 var(--font-body)}
+.final-results-link-label{display:block;margin-top:2px;font-size:12px;font-weight:850;color:var(--muted)}
+.final-results-link{font-family:var(--font-body);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.final-results-copy{margin-top:9px!important}
+.final-results-close{margin-top:8px!important;background:transparent!important;color:var(--accent-soft)!important}
+.final-results-close:hover{background:var(--accent-surface)!important;color:var(--accent-ink)!important}
+.final-share-status{min-height:18px;margin:7px 3px 0;text-align:center}
+.results-spectator-mode{background:var(--bg)}
+.shared-results-page{width:min(860px,100%);margin:0 auto;padding:24px 0}
+.shared-results-card{padding:22px}
+.shared-results-card h1{margin:0 0 4px;font:900 clamp(30px,6vw,48px)/1.05 var(--font-headline);letter-spacing:-.04em}
+.shared-results-rankings{margin-top:var(--section-gap)}
+.shared-results-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin-top:var(--section-gap)}
+.shared-results-summary>div{padding:10px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface)}
+.shared-results-summary span{display:block;color:var(--muted);font-size:10px;font-weight:800}
+.shared-results-summary b{display:block;margin-top:4px;color:var(--accent-soft);font-size:14px}
+@media(max-width:700px){.sheet.final-share .sheet-panel{padding:20px 16px 16px}.final-results-qr{width:min(290px,100%);padding:10px}.shared-results-page{padding:12px 0}.shared-results-card{padding:16px 12px}.shared-results-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
