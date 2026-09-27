@@ -50,7 +50,7 @@ test.describe('session persistence across refresh', () => {
     await expect(page.locator('#currentNo')).toHaveText('GAME 1');
     await expect(page.locator('#progressText')).toHaveText('0 / 15 games');
     await expect.poll(() => currentPlayerNames(page)).toEqual(before.current);
-    await expect.poll(() => page.locator('#upNextList').innerText()).toHaveText(before.upNext);
+    await expect.poll(() => page.locator('#upNextList').innerText()).toEqual(before.upNext);
     await expect(page.locator('#stickyGame')).toHaveText(before.sticky);
     await expect(page.locator('#liveStatus')).toHaveText('NEXT UP');
     await expect(page.locator('#currentNo')).not.toContainText('SESSION COMPLETE');
@@ -58,6 +58,7 @@ test.describe('session persistence across refresh', () => {
 
   test('five completed games restore as Game 6 with match results after refresh', async ({ page }) => {
     await setupSession(page);
+    await page.locator('[data-view="scheduleView"]').click();
     for (let i = 0; i < 5; i++) {
       await page.locator(`#scheduleList [data-result="${i}"]`).click();
       await page.locator('#sheetContent [data-winner="0"]').click();
@@ -75,16 +76,20 @@ test.describe('session persistence across refresh', () => {
     await expect(page.locator('#progressText')).toHaveText('5 / 15 games');
     await expect(page.locator('#progressPct')).toHaveText('33%');
     await expect(page.locator('#liveStatus')).toHaveText('NEXT UP');
+    await expect(page.locator('[data-view="scheduleView"]')).toBeVisible();
+    await page.locator('[data-view="scheduleView"]').click();
     await expect(page.locator('#scheduleList .game-row.done')).toHaveCount(5);
     await expect(page.locator('#rankingsList .rank-row').first()).toContainText('W');
   });
 
   test('all 15 games completed restore as Session Complete after refresh', async ({ page }) => {
     await setupSession(page);
+    await page.locator('[data-view="scheduleView"]').click();
     for (let i = 0; i < 15; i++) {
       await page.locator(`#scheduleList [data-result="${i}"]`).click();
       await page.locator('#sheetContent [data-winner="0"]').click();
     }
+    await page.locator('[data-view="liveView"]').click();
     await expect(page.locator('#progressText')).toHaveText('15 / 15 games');
     await expect(page.locator('#currentNo')).toHaveText('✓ SESSION COMPLETE');
     await expect(page.locator('#liveStatus')).toHaveText('COMPLETE');
