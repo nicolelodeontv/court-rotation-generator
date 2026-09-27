@@ -296,7 +296,7 @@ function leaderboardRows(ranks){
   const list=Array.isArray(ranks)?ranks:[];
   const hasResults=list.some(row=>(Number(row?.games)||0)>0);
   if(!hasResults)return '<p class="hint">No results yet. Complete games and record a winner to build the standings.</p>';
-  return '<div class="rankings-list">'+list.map(row=>'<article class="rank-row"><div class="rank-identity"><div class="rank-pos">'+escapeHtml(row.position||'—')+'</div><div class="rank-name">'+escapeHtml(row.name||'')+'</div></div><div class="rank-stats"><span class="rank-chip">'+Number(row.wins)||0+'W</span><span class="rank-chip">'+Number(row.losses)||0+'L</span><span class="rank-chip">'+Number(row.games)||0+' '+((Number(row.games)||0)===1?'game':'games')+'</span><span class="rank-chip rank-pct">'+escapeHtml(row.winRate||'—')+'</span></div></article>').join('')+'</div>';
+  return '<div class="rankings-list">'+list.map(row=>'<article class="rank-row"><div class="rank-identity"><div class="rank-pos">'+escapeHtml(row.position||'—')+'</div><div class="rank-name">'+escapeHtml(row.name||'')+'</div></div><div class="rank-stats"><span class="rank-chip">'+(Number(row.wins)||0)+'W</span><span class="rank-chip">'+(Number(row.losses)||0)+'L</span><span class="rank-chip">'+(Number(row.games)||0)+' '+((Number(row.games)||0)===1?'game':'games')+'</span><span class="rank-chip rank-pct">'+escapeHtml(row.winRate||'—')+'</span></div></article>').join('')+'</div>';
 }
 
 function renderSnapshot(payload){
