@@ -40,14 +40,14 @@
 }
 
 
-/* More: keep Session and Summary side by side on tablet/desktop, with natural card heights. */
+/* More: keep Session and the stacked right column aligned without grid row stretching. */
 #moreView .tools-grid{align-items:start}
-#moreView .summary-card{grid-column:auto}
+#moreView .tools-right-column{min-width:0;display:flex;flex-direction:column;gap:var(--section-gap)}
+#moreView .summary-card,#moreView .session-reset-card{grid-column:auto}
 @media(min-width:701px){
   #moreView .tools-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-  #moreView .session-reset-card{grid-column:2}
 }
 @media(max-width:700px){
   #moreView .tools-grid{grid-template-columns:1fr}
-  #moreView .summary-card{grid-column:auto}
+  #moreView .tools-right-column{gap:var(--section-gap)}
 }
