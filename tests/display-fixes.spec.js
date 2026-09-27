@@ -705,6 +705,8 @@ test('winner row inversion, player stars, singular games label, and setup nav vi
   expect(ranksStyles.chipText).toBe('rgb(239, 234, 221)');
 
   await page.reload();
+  await expect(page.locator('.sheet.final-rankings')).toBeVisible();
+  await page.locator('#completeCloseBtn').click();
   await expect(page.locator('#setupNavBtn')).toBeHidden();
   await expect(page.locator('.bottom-nav .nav-btn:not([hidden])')).toHaveCount(5);
 
