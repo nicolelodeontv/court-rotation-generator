@@ -112,7 +112,6 @@ test('Live spectator link shows canonical current game, timer, stars, and update
   await page.locator('[data-view="moreView"]').click();
   await expect(page.locator('#liveSyncBtn')).toBeVisible();
   await page.locator('#liveSyncBtn').click();
-  const liveLink = await expect.poll(() => page.evaluate(() => window.__crgCopiedText || '')).toMatch(/view=spectator&?[^]*live=|[?&]live=CRG-/).catch(()=>{});
   const copied = await page.evaluate(() => window.__crgCopiedText);
   expect(copied).toMatch(/[?&]live=CRG-[A-Z0-9]+/);
 
