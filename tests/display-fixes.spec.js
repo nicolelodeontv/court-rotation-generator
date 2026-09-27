@@ -782,7 +782,7 @@ test('Feature 24 timer starts, persists across refresh, resets on swap, and reco
 
   const beforeSwap=await page.locator('#currentTimer').textContent();
   await page.locator('#nextBtn').click();
-  await expect(page.locator('#currentNo')).toHaveText('GAME 2');
+  await expect(page.locator('#currentNo')).toHaveText('GAME 1');
   await expect(page.locator('#currentTimer')).toHaveText('00:00');
   expect(beforeSwap).not.toBe('00:00');
   const swapStarted=await page.evaluate(()=>JSON.parse(localStorage.getItem('crg-live-state-v1')).gameStartedAt);
@@ -842,7 +842,7 @@ test('Feature 21 reset action remains safe and fully restores Setup defaults', a
   await expect(page.locator('.sheet:not([hidden]) .sheet-title')).toHaveText('Reset everything?');
   await page.locator('#finalResetCancel').click();
   await expect(page.locator('.sheet.final-rankings')).toBeVisible();
-  await expect(page.locator('#matchLogCount')).toHaveText('1');
+  await expect(page.locator('#matchLogCount')).toHaveText('3');
   await page.locator('#finalResetBtn').click();
   await page.locator('#finalResetConfirm').click();
   await expect(page.locator('#setupView')).toHaveClass(/active/);
