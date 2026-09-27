@@ -152,7 +152,9 @@ test('Copy live spectator link shows the current game and updates after a comple
   await expect(spectator.locator('.spectator-current h2')).toHaveText(hostGame);
   await expect(spectator.locator('.spectator-current .spectator-player-name')).toHaveCount(4);
   expect(await spectator.locator('.spectator-current .spectator-player-name').allTextContents()).toEqual(hostNames);
-  expect(await spectator.locator('.spectator-current .spectator-player small').allTextContents()).toEqual(expect.arrayContaining(['⭐⭐⭐']));
+  const spectatorStars = await spectator.locator('.spectator-current .spectator-player small').allTextContents();
+  expect(spectatorStars).toHaveLength(4);
+  expect(spectatorStars.every(value => /^⭐{1,6}$/.test(value))).toBeTruthy();
   await expect(spectator.locator('.spectator-current .eyebrow')).toContainText(hostCourt);
   await expect(spectator.locator('.spectator-live-meta strong')).toHaveText(/^\d{2}:\d{2}$/);
   await expect(spectator.locator('.spectator-progress')).toContainText('0 / 3 games');
@@ -188,6 +190,8 @@ test('Ranks Share Results works before and after results and updates the shared 
   await expect(shared.locator('.shared-live-leaderboard-page')).toBeVisible();
   await expect(shared.locator('.spectator-leaderboard')).toContainText('No results yet');
 
+  await page.locator('[data-view="liveView"]').click();
+  await expect(page.locator('#completeBtn')).toBeVisible();
   await completeCurrentGame(page);
 
   await expect(shared.locator('.spectator-leaderboard .rank-row').first()).toBeVisible({ timeout: 6000 });
