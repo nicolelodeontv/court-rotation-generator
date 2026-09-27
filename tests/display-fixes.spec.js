@@ -556,6 +556,9 @@ test('Live uses two columns on desktop, stacks on mobile, and rankings stay sing
   await page.locator('#scoreB').fill('7');
   await page.locator('#scoreConfirm').click();
   }
+  await expect(page.locator('#currentNo')).toHaveText('GAME 12');
+  await expect(page.locator('#liveView .live-upnext-column')).toBeHidden();
+  await expect(page.locator('#liveView .live-grid')).toHaveClass(/no-upcoming/);
   await expect(page.locator('.sheet.final-rankings')).toBeVisible();
   await page.locator('#completeCloseBtn').click();
   const completeBounds = await page.evaluate(() => {
@@ -735,7 +738,20 @@ test('Feature 21 reset action remains safe and fully restores Setup defaults', a
   await expect(page.locator('#games')).toHaveValue('Auto');
   await expect(page.locator('#courts')).toHaveValue('1');
   await expect(page.locator('#duration')).toHaveValue('15');
-  await expect(page.locator('#sessionLength')).toHaveValue('');
+  await expect(page.locator('#sessionLength')).toHaveVtest('Header navigation is vertically centered against the full header text block', async ({ page }) => {
+  for (const width of [1280, 900]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+    const metrics=await page.evaluate(()=>{const block=document.querySelector('.topbar > div')?.getBoundingClientRect();const nav=document.querySelector('.topbar .bottom-nav')?.getBoundingClientRect();const style=document.querySelector('.topbar .bottom-nav')?getComputedStyle(document.querySelector('.topbar .bottom-nav')):null;return{blockTop:block?.top||0,blockBottom:block?.bottom||0,navTop:nav?.top||0,navBottom:nav?.bottom||0,alignSelf:style?.alignSelf||''}});
+    expect(metrics.alignSelf).toBe('center');
+    const blockMid=(metrics.blockTop+metrics.blockBottom)/2;
+    const navMid=(metrics.navTop+metrics.navBottom)/2;
+    expect(Math.abs(blockMid-navMid)).toBeLessThanOrEqual(1);
+  }
+});
+
+alue('');
   await expect(page.locator('#matchLogCount')).toHaveText('0');
   await expect(page.locator('#scheduleList .game-row')).toHaveCount(0);
   await expect(page.locator('#rankingsList .rank-row')).toHaveCount(0);
