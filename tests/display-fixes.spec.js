@@ -706,7 +706,7 @@ test('winner row inversion, player stars, singular games label, and setup nav vi
 
   await page.reload();
   await expect(page.locator('#setupNavBtn')).toBeHidden();
-  await expect(page.locator('.bottom-nav .nav-btn')).toHaveCount(5);
+  await expect(page.locator('.bottom-nav .nav-btn:not([hidden])')).toHaveCount(5);
 
   await page.locator('[data-view="moreView"]').click();
   await page.locator('#manageSessionBtn').click();
