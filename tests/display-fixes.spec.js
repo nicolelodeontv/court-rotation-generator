@@ -626,7 +626,7 @@ test('winner row inversion, player stars, singular games label, and setup nav vi
   await page.locator('#pastePlayerNames').fill(roster(4));
   await page.locator('#playerConfirm').click();
   await page.locator('#generateBtn').click();
-  await expect(page.locator('.game-match')).toHaveCount(1, { timeout: 5000 });
+  await expect(page.locator('.game-match')).toHaveCount(3, { timeout: 5000 });
 
   await expect(page.locator('#setupNavBtn')).toBeHidden();
   await expect(page.locator('[data-view="liveView"]')).toHaveClass(/active/);
@@ -639,7 +639,6 @@ test('winner row inversion, player stars, singular games label, and setup nav vi
   await expect(page.locator('#setupView .grid-setup')).toBeVisible();
   await expect(page.locator('#setupSummary')).toHaveCount(0);
 
-  await page.locator('#games').fill('1');
   await expect(page.locator('#setupView .grid-setup')).toBeVisible();
 
   await page.locator('[data-view="playersView"]').click();
@@ -654,6 +653,7 @@ test('winner row inversion, player stars, singular games label, and setup nav vi
   await page.locator('#scoreA').fill('11');
   await page.locator('#scoreB').fill('7');
   await page.locator('#scoreConfirm').click();
+  for (let i = 0; i < 2; i++) { await page.locator('#completeBtn').click(); await page.locator('[data-winner="0"]').click(); await page.locator('#scoreA').fill('11'); await page.locator('#scoreB').fill('7'); await page.locator('#scoreConfirm').click(); }
   await expect(page.locator('.sheet.final-rankings')).toBeVisible();
 
   const firstModal = page.locator('.complete-rank-row').first();
@@ -711,6 +711,117 @@ test('winner row inversion, player stars, singular games label, and setup nav vi
 
 
 
+test('Feature 25 removes timing inputs and locks Games per player to Auto', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+  await expect(page.locator('#duration')).toHaveCount(0);
+  await expect(page.locator('#sessionLength')).toHaveCount(0);
+  const games=page.locator('#games');
+  await expect(games).toHaveValue('Auto');
+  await expect(games).toHaveAttribute('readonly', '');
+  await expect(games).toHaveAttribute('aria-readonly', 'true');
+  await expect(games).toHaveAttribute('tabindex', '-1');
+  await expect(page.locator('#gamesHint')).toHaveText('Games per player are calculated automatically to balance the session.');
+  await expect(page.locator('#courts')).toBeEditable();
+});
+
+test('Paste names modal uses themed scrollbars without changing the textarea layout', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+  await page.locator('#playerPasteBtn').click();
+  const textarea=page.locator('#pastePlayerNames');
+  await expect(textarea).toBeVisible();
+  const before=await textarea.evaluate(el => ({width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height,resize:getComputedStyle(el).resize}));
+  await textarea.fill(Array.from({length:40},(_,i)=>'Player '+(i+1)).join('\n'));
+  const scroll=await textarea.evaluate(el => {
+    const track=getComputedStyle(el,'::-webkit-scrollbar');
+    const thumb=getComputedStyle(el,'::-webkit-scrollbar-thumb');
+    const button=getComputedStyle(el,'::-webkit-scrollbar-button');
+    return {overflow:getComputedStyle(el).overflowY,scrollable:el.scrollHeight>el.clientHeight,width:track.width,trackBackground:getComputedStyle(el,'::-webkit-scrollbar-track').backgroundColor,thumbBackground:thumb.backgroundColor,thumbRadius:thumb.borderRadius,buttonDisplay:button.display};
+  });
+  expect(scroll.scrollable).toBeTruthy();
+  expect(scroll.overflow).toBe('auto');
+  expect(scroll.width).toBe('8px');
+  expect(scroll.trackBackground).toBe('rgb(55, 64, 48)');
+  expect(scroll.thumbBackground).toBe('rgb(184, 166, 123)');
+  expect(scroll.thumbRadius).toBe('999px');
+  expect(scroll.buttonDisplay).toBe('none');
+  const after=await textarea.evaluate(el => ({width:el.getBoundingClientRect().width,height:el.getBoundingClientRect().height,resize:getComputedStyle(el).resize}));
+  expect(after).toEqual(before);
+  const sheet=await page.locator('.sheet-panel').evaluate(el => ({
+    overflow:getComputedStyle(el).overflow,
+    thumbBackground:getComputedStyle(el,'::-webkit-scrollbar-thumb').backgroundColor,
+    trackBackground:getComputedStyle(el,'::-webkit-scrollbar-track').backgroundColor,
+    buttonDisplay:getComputedStyle(el,'::-webkit-scrollbar-button').display
+  }));
+  expect(sheet.overflow).toBe('auto');
+  expect(sheet.thumbBackground).toBe('rgb(184, 166, 123)');
+  expect(sheet.trackBackground).toBe('rgb(55, 64, 48)');
+  expect(sheet.buttonDisplay).toBe('none');
+});
+
+test('Feature 24 timer starts, persists across refresh, resets on swap, and records completed duration', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+  await page.locator('#playerPasteBtn').click();
+  await page.locator('#pastePlayerNames').fill(roster(4));
+  await page.locator('#playerConfirm').click();
+  await page.locator('#generateBtn').click();
+  await expect(page.locator('.game-match')).toHaveCount(3, { timeout: 5000 });
+  await expect(page.locator('#currentTimer')).toHaveText('00:00');
+  await page.waitForTimeout(2200);
+  const running=await page.locator('#currentTimer').textContent();
+  expect(running).toMatch(/^00:0[2-9]$/);
+  const startedBefore=await page.evaluate(()=>JSON.parse(localStorage.getItem('crg-live-state-v1')).gameStartedAt);
+  expect(Number.isFinite(Number(startedBefore))).toBeTruthy();
+
+  await page.reload();
+  await expect(page.locator('#currentTimer')).toHaveText(/00:0[2-9]/);
+  const restoredStarted=await page.evaluate(()=>JSON.parse(localStorage.getItem('crg-live-state-v1')).gameStartedAt);
+  expect(restoredStarted).toBe(startedBefore);
+
+  const beforeSwap=await page.locator('#currentTimer').textContent();
+  await page.locator('#nextBtn').click();
+  await expect(page.locator('#currentNo')).toHaveText('GAME 2');
+  await expect(page.locator('#currentTimer')).toHaveText('00:00');
+  expect(beforeSwap).not.toBe('00:00');
+  const swapStarted=await page.evaluate(()=>JSON.parse(localStorage.getItem('crg-live-state-v1')).gameStartedAt);
+  expect(Number.isFinite(Number(swapStarted))).toBeTruthy();
+  expect(swapStarted).toBeGreaterThanOrEqual(Date.now()-1200);
+
+  await page.waitForTimeout(1200);
+  await page.locator('#completeBtn').click();
+  const paused=await page.locator('#currentTimer').textContent();
+  expect(paused).toMatch(/^00:0[1-9]$/);
+  await page.locator('[data-winner="0"]').click();
+  await page.locator('#scoreA').fill('11');
+  await page.locator('#scoreB').fill('7');
+  await page.locator('#scoreConfirm').click();
+  await expect(page.locator('#matchLog .match-log-result').first()).toContainText(paused);
+  const saved=await page.evaluate(()=>{const d=JSON.parse(localStorage.getItem('crg-live-state-v1'));return Number(d.gameDurations['1'])});
+  expect(saved).toBeGreaterThanOrEqual(1);
+  expect(saved).toBeLessThanOrEqual(5);
+});
+
+test('Reset everything sits in its own card below Session summary', async ({ page }) => {
+  await page.setViewportSize({ width:1280, height:900 });
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+  await page.locator('[data-view="moreView"]').click();
+  const session=page.locator('#moreView .tools-grid > .card').nth(0);
+  const summary=page.locator('#moreView .summary-card');
+  const reset=page.locator('#moreView .session-reset-card');
+  await expect(session).toBeVisible();
+  await expect(summary).toBeVisible();
+  await expect(reset).toBeVisible();
+  await expect(session.locator('#resetBtn')).toHaveCount(0);
+  await expect(session.locator('.tool-divider')).toHaveCount(0);
+  await expect(reset.locator('#resetBtn')).toBeVisible();
+  const rects=await page.evaluate(()=>{const s=document.querySelector('#moreView .summary-card')?.getBoundingClientRect(),r=document.querySelector('#moreView .session-reset-card')?.getBoundingClientRect();return{sTop:s?.top||0,sBottom:s?.bottom||0,sLeft:s?.left||0,rTop:r?.top||0,rLeft:r?.left||0}});
+  expect(rects.rTop).toBeGreaterThanOrEqual(rects.sBottom-1);
+  expect(Math.abs(rects.rLeft-rects.sLeft)).toBeLessThanOrEqual(1);
+});
+
 test('Feature 21 reset action remains safe and fully restores Setup defaults', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
@@ -718,14 +829,14 @@ test('Feature 21 reset action remains safe and fully restores Setup defaults', a
   await page.locator('#playerPasteBtn').click();
   await page.locator('#pastePlayerNames').fill(roster(4));
   await page.locator('#playerConfirm').click();
-  await page.locator('#games').fill('1');
   await page.locator('#generateBtn').click();
-  await expect(page.locator('.game-match')).toHaveCount(1, { timeout: 5000 });
+  await expect(page.locator('.game-match')).toHaveCount(3, { timeout: 5000 });
   await page.locator('#completeBtn').click();
   await page.locator('[data-winner="0"]').click();
   await page.locator('#scoreA').fill('11');
   await page.locator('#scoreB').fill('7');
   await page.locator('#scoreConfirm').click();
+  for (let i = 0; i < 2; i++) { await page.locator('#completeBtn').click(); await page.locator('[data-winner="0"]').click(); await page.locator('#scoreA').fill('11'); await page.locator('#scoreB').fill('7'); await page.locator('#scoreConfirm').click(); }
   await expect(page.locator('.sheet.final-rankings')).toBeVisible();
   await page.locator('#finalResetBtn').click();
   await expect(page.locator('.sheet:not([hidden]) .sheet-title')).toHaveText('Reset everything?');
@@ -740,8 +851,8 @@ test('Feature 21 reset action remains safe and fully restores Setup defaults', a
   await expect(page.locator('#names')).toHaveValue('');
   await expect(page.locator('#games')).toHaveValue('Auto');
   await expect(page.locator('#courts')).toHaveValue('1');
-  await expect(page.locator('#duration')).toHaveValue('15');
-  await expect(page.locator('#sessionLength')).toHaveValue('');
+  await expect(page.locator('#duration')).toHaveCount(0);
+  await expect(page.locator('#sessionLength')).toHaveCount(0);
   await expect(page.locator('#matchLogCount')).toHaveText('0');
   await expect(page.locator('#scheduleList .game-row')).toHaveCount(0);
   await expect(page.locator('#rankingsList .rank-row')).toHaveCount(0);
@@ -768,14 +879,14 @@ test('Feature 23 opens QR/copy-link popup and shared link renders read-only rank
   await page.locator('#playerPasteBtn').click();
   await page.locator('#pastePlayerNames').fill(roster(4));
   await page.locator('#playerConfirm').click();
-  await page.locator('#games').fill('1');
   await page.locator('#generateBtn').click();
-  await expect(page.locator('.game-match')).toHaveCount(1, { timeout: 5000 });
+  await expect(page.locator('.game-match')).toHaveCount(3, { timeout: 5000 });
   await page.locator('#completeBtn').click();
   await page.locator('[data-winner="0"]').click();
   await page.locator('#scoreA').fill('11');
   await page.locator('#scoreB').fill('7');
   await page.locator('#scoreConfirm').click();
+  for (let i = 0; i < 2; i++) { await page.locator('#completeBtn').click(); await page.locator('[data-winner="0"]').click(); await page.locator('#scoreA').fill('11'); await page.locator('#scoreB').fill('7'); await page.locator('#scoreConfirm').click(); }
   await expect(page.locator('.sheet.final-rankings')).toBeVisible();
 
   const modalRows = await page.locator('.complete-rank-row').evaluateAll(rows => rows.map(row => ({
@@ -852,7 +963,7 @@ test('Feature 22 hides Up Next when there are no upcoming games and restores it 
 
   await page.locator('[data-view="moreView"]').click();
   await page.locator('#manageSessionBtn').click();
-  await page.locator('#games').fill('2');
+  await expect(page.locator('#games')).toHaveValue('Auto');
   await page.locator('#generateBtn').click();
   await expect(page.locator('#liveView .live-upnext-column')).toBeVisible();
   await expect(page.locator('#liveView .live-grid')).not.toHaveClass(/no-upcoming/);
