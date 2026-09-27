@@ -97,6 +97,7 @@ test.describe('session persistence across refresh', () => {
     }
     await page.locator('[data-view="liveView"]').click();
     await page.locator('#completeCloseBtn').click();
+    await page.locator('#completeCloseBtn').click();
     await page.locator('[data-view="liveView"]').click();
     await expect(page.locator('#progressText')).toHaveText('15 / 15 games');
     await expect(page.locator('#currentNo')).toHaveText('✓ SESSION COMPLETE');
