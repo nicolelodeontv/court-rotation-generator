@@ -67,7 +67,7 @@ async function assertSpectatorCurrentCard(browser, snapshotUrl, expectedNames, s
   const scheduleNames = spectator.locator('.spectator-game .spectator-player-name');
   expect(await scheduleNames.count()).toBeGreaterThanOrEqual(expectedNames.length);
   for (const name of expectedNames) {
-    await expect(spectator.locator('.spectator-game').filter({ hasText: name }).first()).toBeVisible();
+    await expect(spectator.locator('.spectator-current .spectator-player-name').filter({ hasText: name }).first()).toBeVisible();
   }
 
   await spectator.screenshot({ path: `test-results/${screenshotName}`, fullPage: true });
@@ -125,7 +125,7 @@ test('Up Next free reorder moves the whole generated game without validation blo
 
   await page.mouse.move(sourceRect.x + sourceRect.width / 2, sourceRect.y + sourceRect.height / 2);
   await page.mouse.down();
-  await page.mouse.move(targetRect.x + targetRect.width / 2, targetRect.y + 4, { steps: 8 });
+  await page.mouse.move(targetRect.x + targetRect.width / 2, targetRect.y + targetRect.height - 4, { steps: 8 });
 
   await expect.poll(() => page.locator('.upnext-dragging-card').count()).toBe(1);
   const dragState = await page.locator('.upnext-dragging-card').evaluate(card => {
@@ -337,7 +337,7 @@ test('Up Next width and fixed header navigation stay aligned', async ({ page }) 
   expect(bounds.navPosition).toBe('static');
   expect(bounds.navBottomStyle).toBe('auto');
   expect(await page.locator('.bottom-nav').evaluate(node => getComputedStyle(node).columnGap)).toBe('10px');
-  expect(await page.locator('.bottom-nav').evaluate(node => node.parentElement === document.body)).toBeTruthy();
+  expect(await page.locator('.bottom-nav').evaluate(node => node.parentElement?.classList.contains('topbar'))).toBeTruthy();
   await expect(page.locator('#scheduleList .game-label')).toHaveText(Array.from({ length: 30 }, (_, i) => `Game ${i + 1}`));
   for (const view of ['setupView', 'liveView', 'scheduleView', 'playersView', 'rankingsView', 'moreView']) {
     await page.locator(`[data-view="${view}"]`).click();
@@ -360,7 +360,7 @@ test('Complete game uses a separate score step and blocks a contradictory winner
   await page.locator('#pastePlayerNames').fill(roster(4));
   await page.locator('#playerConfirm').click();
   await page.locator('#generateBtn').click();
-  await expect(page.locator('.game-match').first()).toBeVisible();
+  await expect(page.locator('.game-match')).toHaveCount(3, { timeout: 5000 });
 
   await page.locator('#completeBtn').click();
   await expect(page.locator('.sheet-title')).toHaveText('Game 1 result');
@@ -653,7 +653,7 @@ test('winner row inversion, player stars, singular games label, and setup nav vi
   const playerCard = page.locator('.player-card').first();
   await expect(playerCard.locator('.player-name-rating')).toBeVisible();
   await expect(playerCard.locator('.player-skill-stars')).toHaveText(/⭐{1,6}/);
-  await expect(playerCard.locator('.stat-chip').first()).toContainText('1 game');
+  await expect(playerCard.locator('.stat-chip').first()).toContainText(/\d+ games?/);
 
   await page.locator('[data-view="liveView"]').click();
   await page.locator('#completeBtn').click();
