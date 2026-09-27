@@ -196,7 +196,7 @@ test('Ranks Share Results works before and after results and updates the shared 
 
   await expect(shared.locator('.spectator-leaderboard .rank-row').first()).toBeVisible({ timeout: 6000 });
   await expect(shared.locator('.spectator-leaderboard')).not.toContainText('No results yet');
-  await expect(shared.locator('.spectator-leaderboard .rank-chip').first()).toContainText('1W');
+  await expect(shared.locator('.spectator-leaderboard .rank-row').first().locator('.rank-chip').first()).toHaveText('1W');
 
   await page.locator('[data-view="rankingsView"]').click();
   await page.locator('#shareLeaderboardBtn').click();
