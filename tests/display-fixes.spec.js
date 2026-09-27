@@ -798,7 +798,7 @@ test('Feature 24 timer starts, persists across refresh, resets on swap, and reco
   await page.locator('#scoreB').fill('7');
   await page.locator('#scoreConfirm').click();
   await expect(page.locator('#matchLog .match-log-result').first()).toContainText(paused);
-  const saved=await page.evaluate(()=>{const d=JSON.parse(localStorage.getItem('crg-live-state-v1'));return Number(d.gameDurations['1'])});
+  const saved=await page.evaluate(()=>{const d=JSON.parse(localStorage.getItem('crg-live-state-v1'));return Number(d.gameDurations['0'])});
   expect(saved).toBeGreaterThanOrEqual(1);
   expect(saved).toBeLessThanOrEqual(5);
 });
