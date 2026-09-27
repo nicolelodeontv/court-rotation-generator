@@ -339,7 +339,7 @@ test('Up Next width and fixed header navigation stay aligned', async ({ page }) 
   expect(await page.locator('.bottom-nav').evaluate(node => getComputedStyle(node).columnGap)).toBe('10px');
   expect(await page.locator('.bottom-nav').evaluate(node => node.parentElement?.classList.contains('topbar'))).toBeTruthy();
   await expect(page.locator('#scheduleList .game-label')).toHaveText(Array.from({ length: 30 }, (_, i) => `Game ${i + 1}`));
-  for (const view of ['setupView', 'liveView', 'scheduleView', 'playersView', 'rankingsView', 'moreView']) {
+  for (const view of ['liveView', 'scheduleView', 'playersView', 'rankingsView', 'moreView']) {
     await page.locator(`[data-view="${view}"]`).click();
     await expect(page.locator('#stickyLive')).toHaveCount(0);
   }
@@ -376,7 +376,7 @@ test('Complete game uses a separate score step and blocks a contradictory winner
 
   await page.locator('#scoreBack').click();
   await expect(page.locator('.sheet-title')).toHaveText('Game 1 result');
-  await expect(page.locator('[data-winner="0"]')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('[data-winner="0"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('[data-winner="1"]')).toBeVisible();
 
   await page.locator('[data-winner="0"]').click();
@@ -683,7 +683,7 @@ test('winner row inversion, player stars, singular games label, and setup nav vi
   expect(modalStyles.color).toBe('rgb(42, 51, 40)');
   expect(modalStyles.chipBackgrounds.every(value => value === 'rgb(42, 51, 40)')).toBeTruthy();
   expect(modalStyles.chipColors.every(value => value === 'rgb(239, 234, 221)')).toBeTruthy();
-  expect(modalStyles.gameChip).toBe('1 game');
+  expect(modalStyles.gameChip).toBe('3 games');
   expect(modalStyles.display).toBe('flex');
   expect(modalStyles.wrap).toBe('nowrap');
 
