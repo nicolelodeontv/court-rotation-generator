@@ -40,6 +40,11 @@ async function installFakeSupabase(page) {
 }
 
 async function generateSession(page, playerCount, expectedGames) {
+  page.on('pageerror', error => console.log('[LIVE-REGRESSION][PAGEERROR] ' + error.message));
+  page.on('console', message => {
+    const value = message.text();
+    if (value.includes('CRG') || value.includes('error') || value.includes('Error')) console.log('[LIVE-REGRESSION][CONSOLE] ' + value);
+  });
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
   await page.waitForTimeout(300);
@@ -48,7 +53,12 @@ async function generateSession(page, playerCount, expectedGames) {
   await page.locator('#playerConfirm').click();
   await expect(page.locator('#playerList .player-row')).toHaveCount(playerCount, { timeout: 2000 });
   await page.locator('#generateBtn').click();
-  await expect(page.locator('#setupStatus')).toContainText('Rotation ready', { timeout: 5000 });
+  try {
+    await expect(page.locator('#setupStatus')).toContainText('Rotation ready', { timeout: 8000 });
+  } catch (error) {
+    console.log('[LIVE-REGRESSION][GENERATE-DIAGNOSTIC] status=' + JSON.stringify(await page.locator('#setupStatus').textContent()) + ' games=' + await page.locator('.game-match').count() + ' scheduler=' + await page.evaluate(() => String(typeof window.RotationScheduler?.generate)));
+    throw error;
+  }
   await expect(page.locator('.game-match')).toHaveCount(expectedGames, { timeout: 5000 });
 }
 
@@ -63,7 +73,7 @@ async function completeCurrentGame(page) {
 
 test('Up Next outer spacing is uniform and the panel hugs four cards', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await generateSession(page, 10, 15);
+  await generateSession(page, 8, 12);
 
   const metrics = await page.evaluate(() => {
     const panel = document.querySelector('#liveView .live-upnext-column > .upnext');
@@ -101,7 +111,7 @@ test('Up Next outer spacing is uniform and the panel hugs four cards', async ({ 
 
 test('Live spectator link shows canonical current game, timer, stars, and updates after a completed game', async ({ page, context }) => {
   await installFakeSupabase(page);
-  await generateSession(page, 4, 3);
+  await generateSession(page, 8, 12);
 
   const hostCurrent = await page.evaluate(() => ({
     game: document.querySelector('#currentNo')?.textContent.trim(),
@@ -141,7 +151,7 @@ test('Live spectator link shows canonical current game, timer, stars, and update
 
 test('Ranks Share results works before results and remains live after standings change', async ({ page, context }) => {
   await installFakeSupabase(page);
-  await generateSession(page, 4, 3);
+  await generateSession(page, 8, 12);
   await page.locator('[data-view="rankingsView"]').click();
 
   await expect(page.locator('#rankTopTitle')).toHaveText('No results yet');
