@@ -549,29 +549,31 @@ test('Live uses two columns on desktop, stacks on mobile, and rankings stay sing
   expect(schedule.firstMatch).toMatch(/⭐/);
 
   await page.locator('[data-view="liveView"]').click();
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 11; i++) {
     await page.locator('#completeBtn').click();
     await page.locator('[data-winner="0"]').click();
-  await page.locator('#scoreA').fill('11');
-  await page.locator('#scoreB').fill('7');
-  await page.locator('#scoreConfirm').click();
+    await page.locator('#scoreA').fill('11');
+    await page.locator('#scoreB').fill('7');
+    await page.locator('#scoreConfirm').click();
   }
   await expect(page.locator('#currentNo')).toHaveText('GAME 12');
   await expect(page.locator('#liveView .live-upnext-column')).toBeHidden();
   await expect(page.locator('#liveView .live-grid')).toHaveClass(/no-upcoming/);
+  await page.locator('#completeBtn').click();
+  await page.locator('[data-winner="0"]').click();
+  await page.locator('#scoreA').fill('11');
+  await page.locator('#scoreB').fill('7');
+  await page.locator('#scoreConfirm').click();
   await expect(page.locator('.sheet.final-rankings')).toBeVisible();
   await page.locator('#completeCloseBtn').click();
+  await expect(page.locator('#liveView .live-upnext-column')).toBeHidden();
+  await expect(page.locator('#liveView .live-grid')).toHaveClass(/no-upcoming/);
   const completeBounds = await page.evaluate(() => {
-    const main = document.querySelector('#liveView .live-main-column');
-    const panel = document.querySelector('#liveView .live-upnext-column > .upnext');
-    const mr = main?.getBoundingClientRect();
-    const pr = panel?.getBoundingClientRect();
-    return { mainHeight: mr?.height || 0, mainBottom: mr?.bottom || 0, panelHeight: pr?.height || 0, panelBottom: pr?.bottom || 0 };
+    const main = document.querySelector('#liveView .live-main-column')?.getBoundingClientRect();
+    const grid = document.querySelector('#liveView .live-grid')?.getBoundingClientRect();
+    return { mainWidth: main?.width || 0, gridWidth: grid?.width || 0 };
   });
-  expect(Math.abs(completeBounds.panelBottom - completeBounds.mainBottom)).toBeLessThanOrEqual(1);
-  expect(Math.abs(completeBounds.panelHeight - completeBounds.mainHeight)).toBeLessThanOrEqual(1);
-  expect(completeBounds.panelHeight).toBeLessThan(inProgressPanelHeight);
-  await expect(page.locator('#upNextList .hint')).toHaveText('No games remaining.');
+  expect(Math.abs(completeBounds.mainWidth - completeBounds.gridWidth)).toBeLessThanOrEqual(1);
   const finalRows = await page.locator('.complete-rank-row').evaluateAll(rows => rows.map(row => {
     const style = getComputedStyle(row);
     const identity = row.querySelector('.complete-identity');
@@ -716,6 +718,7 @@ test('Feature 21 reset action remains safe and fully restores Setup defaults', a
   await page.locator('#playerPasteBtn').click();
   await page.locator('#pastePlayerNames').fill(roster(4));
   await page.locator('#playerConfirm').click();
+  await page.locator('#games').fill('1');
   await page.locator('#generateBtn').click();
   await expect(page.locator('.game-match')).toHaveCount(1, { timeout: 5000 });
   await page.locator('#completeBtn').click();
@@ -764,6 +767,7 @@ test('Feature 23 opens QR/copy-link popup and shared link renders read-only rank
   await page.locator('#playerPasteBtn').click();
   await page.locator('#pastePlayerNames').fill(roster(4));
   await page.locator('#playerConfirm').click();
+  await page.locator('#games').fill('1');
   await page.locator('#generateBtn').click();
   await expect(page.locator('.game-match')).toHaveCount(1, { timeout: 5000 });
   await page.locator('#completeBtn').click();
