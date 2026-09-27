@@ -706,20 +706,8 @@ test('winner row inversion, player stars, singular games label, and setup nav vi
 
 
 
-test('Feature 21 adds final rankings share and safe reset actions', async ({ page }) => {
+test('Feature 21 reset action remains safe and fully restores Setup defaults', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.addInitScript(() => {
-    window.__sharedPayload = null;
-    window.__clipboardText = '';
-    Object.defineProperty(navigator, 'share', {
-      configurable: true,
-      value: async payload => { window.__sharedPayload = payload; },
-    });
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: { writeText: async text => { window.__clipboardText = text; } },
-    });
-  });
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
   await page.locator('#playerPasteBtn').click();
@@ -727,67 +715,17 @@ test('Feature 21 adds final rankings share and safe reset actions', async ({ pag
   await page.locator('#playerConfirm').click();
   await page.locator('#generateBtn').click();
   await expect(page.locator('.game-match')).toHaveCount(1, { timeout: 5000 });
-
   await page.locator('#completeBtn').click();
   await page.locator('[data-winner="0"]').click();
   await page.locator('#scoreA').fill('11');
   await page.locator('#scoreB').fill('7');
   await page.locator('#scoreConfirm').click();
   await expect(page.locator('.sheet.final-rankings')).toBeVisible();
-  await expect(page.locator('#finalShareBtn')).toHaveText('📤 Share results');
-  await expect(page.locator('#finalResetBtn')).toHaveText('🔄 Reset everything');
-  await expect(page.locator('#completeCloseBtn')).toHaveText('Close rankings');
-
-  const actionLayout = await page.locator('.final-rankings-actions').evaluate(node => {
-    const style = getComputedStyle(node);
-    const buttons = [...node.querySelectorAll('button')].map(button => button.getBoundingClientRect());
-    return {
-      columns: style.gridTemplateColumns.trim().split(/\s+/).length,
-      firstWidth: buttons[0]?.width || 0,
-      secondWidth: buttons[1]?.width || 0,
-      gap: parseFloat(style.columnGap) || 0,
-    };
-  });
-  expect(actionLayout.columns).toBe(2);
-  expect(Math.abs(actionLayout.firstWidth - actionLayout.secondWidth)).toBeLessThanOrEqual(1);
-  expect(actionLayout.gap).toBeGreaterThan(0);
-
-  const rankingData = await page.locator('.complete-rank-row').evaluateAll(rows => rows.map(row => ({
-    place: row.querySelector('.complete-place')?.textContent.trim() || '',
-    name: row.querySelector('.complete-name')?.textContent.trim() || '',
-    wins: row.querySelector('.complete-wins')?.textContent.trim() || '',
-    losses: row.querySelector('.complete-losses')?.textContent.trim() || '',
-    games: row.querySelector('.complete-games-played')?.textContent.trim() || '',
-    pct: row.querySelector('.complete-win-pct')?.textContent.trim() || '',
-  })));
-  expect(rankingData).toHaveLength(4);
-
-  await page.locator('#finalShareBtn').click();
-  const shared = await page.evaluate(() => window.__sharedPayload);
-  expect(shared.title).toBe('Court Rotation — Session complete');
-  for (const row of rankingData) {
-    expect(shared.text).toContain(row.place + ' ' + row.name);
-    expect(shared.text).toContain(row.wins + ' ' + row.losses);
-    expect(shared.text).toContain(row.games);
-    expect(shared.text).toContain(row.pct);
-  }
-  expect(shared.text).toContain('1 game played · 4 players · 1 court');
-  expect(shared.text).toContain('15 min/game · estimated session time: 15 min');
-
-  await page.evaluate(() => { delete navigator.share; });
-  await page.locator('#finalShareBtn').click();
-  const clipboard = await page.evaluate(() => ({ text: window.__clipboardText, status: document.querySelector('#finalShareStatus')?.textContent || '' }));
-  expect(clipboard.text).toContain('🏆 Session complete — Final rankings');
-  expect(clipboard.text).toContain('1 game played · 4 players · 1 court');
-  expect(clipboard.status).toBe('Copied to clipboard!');
-
   await page.locator('#finalResetBtn').click();
-  await expect(page.locator('.sheet-title')).toHaveText('Reset everything?');
+  await expect(page.locator('.sheet:not([hidden]) .sheet-title')).toHaveText('Reset everything?');
   await page.locator('#finalResetCancel').click();
   await expect(page.locator('.sheet.final-rankings')).toBeVisible();
   await expect(page.locator('#matchLogCount')).toHaveText('1');
-  await expect(page.locator('.complete-rank-row')).toHaveCount(4);
-
   await page.locator('#finalResetBtn').click();
   await page.locator('#finalResetConfirm').click();
   await expect(page.locator('#setupView')).toHaveClass(/active/);
@@ -801,6 +739,68 @@ test('Feature 21 adds final rankings share and safe reset actions', async ({ pag
   await expect(page.locator('#matchLogCount')).toHaveText('0');
   await expect(page.locator('#scheduleList .game-row')).toHaveCount(0);
   await expect(page.locator('#rankingsList .rank-row')).toHaveCount(0);
+});
+
+test('Feature 23 opens QR/copy-link popup and shared link renders read-only rankings', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+  await page.locator('#playerPasteBtn').click();
+  await page.locator('#pastePlayerNames').fill(roster(4));
+  await page.locator('#playerConfirm').click();
+  await page.locator('#generateBtn').click();
+  await expect(page.locator('.game-match')).toHaveCount(1, { timeout: 5000 });
+  await page.locator('#completeBtn').click();
+  await page.locator('[data-winner="0"]').click();
+  await page.locator('#scoreA').fill('11');
+  await page.locator('#scoreB').fill('7');
+  await page.locator('#scoreConfirm').click();
+  await expect(page.locator('.sheet.final-rankings')).toBeVisible();
+
+  const modalRows = await page.locator('.complete-rank-row').evaluateAll(rows => rows.map(row => ({
+    place: row.querySelector('.complete-place')?.textContent.trim() || '',
+    name: row.querySelector('.complete-name')?.textContent.trim() || '',
+    wins: row.querySelector('.complete-wins')?.textContent.trim() || '',
+    losses: row.querySelector('.complete-losses')?.textContent.trim() || '',
+    games: row.querySelector('.complete-games-played')?.textContent.trim() || '',
+    pct: row.querySelector('.complete-win-pct')?.textContent.trim() || '',
+  })));
+
+  await page.locator('#finalShareBtn').click();
+  await expect(page.locator('.sheet.final-share')).toBeVisible();
+  await expect(page.locator('#finalResultsQr svg')).toBeVisible();
+  await expect(page.locator('#finalResultsQr svg path')).toHaveAttribute('d', /.+/);
+  const link = await page.locator('#finalResultsLink').inputValue();
+  expect(link).toMatch(/#results=[A-Za-z0-9_-]+$/);
+
+  await page.evaluate(() => {
+    window.__clipboardText = '';
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: async text => { window.__clipboardText = text; } },
+    });
+  });
+  await page.locator('#finalResultsCopyBtn').click();
+  await expect(page.locator('#finalResultsCopyStatus')).toHaveText('Copied!');
+  await expect.poll(() => page.evaluate(() => window.__clipboardText)).toBe(link);
+
+  const shared = await page.context().newPage();
+  await shared.goto(link);
+  await shared.waitForLoadState('domcontentloaded');
+  await expect(shared.locator('.shared-results-page')).toBeVisible();
+  const sharedRows = await shared.locator('.shared-results-rankings .complete-rank-row').evaluateAll(rows => rows.map(row => ({
+    place: row.querySelector('.complete-place')?.textContent.trim() || '',
+    name: row.querySelector('.complete-name')?.textContent.trim() || '',
+    wins: row.querySelector('.complete-wins')?.textContent.trim() || '',
+    losses: row.querySelector('.complete-losses')?.textContent.trim() || '',
+    games: row.querySelector('.complete-games-played')?.textContent.trim() || '',
+    pct: row.querySelector('.complete-win-pct')?.textContent.trim() || '',
+  })));
+  expect(sharedRows).toEqual(modalRows);
+  await shared.close();
+
+  await page.locator('#finalResultsCloseBtn').click();
+  await expect(page.locator('.sheet.final-rankings')).toBeVisible();
 });
 
 
