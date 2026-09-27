@@ -137,13 +137,13 @@ test('Live spectator link shows canonical current game, timer, stars, and update
   expect(await spectator.locator('.spectator-current .spectator-player small').count()).toBe(4);
   expect((await spectator.locator('.spectator-current .spectator-player small').allTextContents()).every(v => /⭐/.test(v))).toBeTruthy();
   await expect(spectator.locator('#spectatorLiveTimer')).toBeVisible();
-  await expect(spectator.locator('.spectator-progress-label')).toContainText('0 / 3 games');
+  await expect(spectator.locator('.spectator-progress-label')).toContainText('0 / 12 games');
   await expect(spectator.locator('.live-pill').first()).toContainText('LIVE');
 
   await completeCurrentGame(page);
   await expect(page.locator('#currentNo')).toHaveText('GAME 2');
   await expect.poll(() => spectator.locator('.spectator-current h2').textContent(), { timeout: 7000 }).toBe('GAME 2');
-  await expect.poll(() => spectator.locator('.spectator-progress-label').textContent(), { timeout: 7000 }).toContain('1 / 3 games');
+  await expect.poll(() => spectator.locator('.spectator-progress-label').textContent(), { timeout: 7000 }).toContain('1 / 12 games');
   await expect(spectator.locator('.spectator-current')).toContainText('Player');
 
   await spectator.close();
@@ -169,7 +169,7 @@ test('Ranks Share results works before results and remains live after standings 
   await expect(shared.locator('.live-leaderboard-page')).toBeVisible();
   await expect(shared.locator('.live-pill').first()).toContainText('LIVE');
   await expect(shared.locator('.live-leaderboard-empty')).toContainText('No results yet');
-  await expect(shared.locator('.rankings-list .rank-row')).toHaveCount(4);
+  await expect(shared.locator('.rankings-list .rank-row')).toHaveCount(8);
 
   await page.locator('#liveLeaderboardShareCloseBtn').click();
   await page.locator('[data-view="liveView"]').click();
