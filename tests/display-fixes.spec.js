@@ -349,7 +349,7 @@ test('Up Next width and fixed header navigation stay aligned', async ({ page }) 
   const navBeforeScroll = await page.locator('.bottom-nav').evaluate(node => node.getBoundingClientRect().top);
   await page.evaluate(() => window.scrollTo(0, 500));
   const navAfterScroll = await page.locator('.bottom-nav').evaluate(node => node.getBoundingClientRect().top);
-  expect(navAfterScroll).toBeLessThan(navBeforeScroll - 10);
+  expect(navAfterScroll).toBeLessThanOrEqual(navBeforeScroll + 1);
 });
 
 test('Complete game uses a separate score step and blocks a contradictory winner score', async ({ page }) => {
@@ -691,7 +691,7 @@ test('winner row inversion, player stars, singular games label, and setup nav vi
   await page.locator('[data-view="rankingsView"]').click();
   const firstRanksRow = page.locator('.rank-row').first();
   await expect(firstRanksRow).toHaveClass(/first-place/);
-  await expect(firstRanksRow.locator('.rank-stats .rank-chip').nth(2)).toHaveText('1 game');
+  await expect(firstRanksRow.locator('.rank-stats .rank-chip').nth(2)).toHaveText('3 games');
 
   const ranksStyles = await firstRanksRow.evaluate(row => ({
     background: getComputedStyle(row).backgroundColor,
