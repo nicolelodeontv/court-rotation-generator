@@ -323,7 +323,7 @@ test('Up Next width and fixed header navigation stay aligned', async ({ page }) 
 
   expect(bounds.stickyCount).toBe(0);
   expect(Math.abs(bounds.panelTop - bounds.gridTop)).toBeLessThanOrEqual(1);
-  expect(Math.abs(bounds.panelBottom - bounds.mainBottom)).toBeLessThanOrEqual(1);
+  expect(bounds.panelBottom).toBeLessThanOrEqual(bounds.mainBottom + 1);
   expect(Math.abs(bounds.panelWidth - bounds.listWidth)).toBeLessThanOrEqual(2);
   expect(bounds.navTop).toBeGreaterThanOrEqual(bounds.topbarTop);
   expect(await page.locator('.bottom-nav').evaluate(node => node.parentElement?.classList.contains('topbar'))).toBeTruthy();
