@@ -741,7 +741,13 @@ test('Feature 21 reset action remains safe and fully restores Setup defaults', a
   await expect(page.locator('#games')).toHaveValue('Auto');
   await expect(page.locator('#courts')).toHaveValue('1');
   await expect(page.locator('#duration')).toHaveValue('15');
-  await expect(page.locator('#sessionLength')).toHaveVtest('Header navigation is vertically centered against the full header text block', async ({ page }) => {
+  await expect(page.locator('#sessionLength')).toHaveValue('');
+  await expect(page.locator('#matchLogCount')).toHaveText('0');
+  await expect(page.locator('#scheduleList .game-row')).toHaveCount(0);
+  await expect(page.locator('#rankingsList .rank-row')).toHaveCount(0);
+});
+
+test('Header navigation is vertically centered against the full header text block', async ({ page }) => {
   for (const width of [1280, 900]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/');
@@ -754,11 +760,6 @@ test('Feature 21 reset action remains safe and fully restores Setup defaults', a
   }
 });
 
-alue('');
-  await expect(page.locator('#matchLogCount')).toHaveText('0');
-  await expect(page.locator('#scheduleList .game-row')).toHaveCount(0);
-  await expect(page.locator('#rankingsList .rank-row')).toHaveCount(0);
-});
 
 test('Feature 23 opens QR/copy-link popup and shared link renders read-only rankings', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
