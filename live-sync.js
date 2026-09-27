@@ -374,7 +374,7 @@ function installHost(){
   hostTick();
 }
 
-window.CRG_COPY_LIVE_SPECTATOR_LINK=startHost;
+window.CRG_COPY_LIVE_SPECTATOR_LINK=startHost;window.CRG_PUBLISH_LIVE_SESSION=publish;
 document.addEventListener('click',event=>{
   const button=event.target?.closest?.('#copyLiveSpectatorBtn');
   if(!button)return;
