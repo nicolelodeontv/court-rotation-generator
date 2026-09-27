@@ -96,8 +96,8 @@ async function completeCurrentGame(page) {
 }
 
 async function currentNames(page) {
-  return page.locator('#currentTeams .team').evaluateAll(teams =>
-    teams.flatMap(team => (team.textContent || '').split(/\s*\+\s*/).map(s => s.trim()).filter(Boolean))
+  return page.locator('#currentTeams .live-player-name').evaluateAll(nodes =>
+    nodes.map(node => (node.textContent || '').replace(/\s+⭐+$/,'').trim()).filter(Boolean)
   );
 }
 
@@ -151,7 +151,7 @@ test('Copy live spectator link shows the current game and updates after a comple
   await spectator.waitForLoadState('domcontentloaded');
   await expect(spectator.locator('.spectator-current h2')).toHaveText(hostGame);
   await expect(spectator.locator('.spectator-current .spectator-player-name')).toHaveCount(4);
-  expect(await spectator.locator('.spectator-current .spectator-player-name').allTextContents()).toEqual(hostNames);
+  expect(await spectator.locator('.spectator-current .spectator-player-name').allTextContents()).toEqual(hostNames);\n  expect(await spectator.locator('.spectator-current .spectator-player small').allTextContents()).toEqual(expect.arrayContaining(['⭐⭐⭐']));
   await expect(spectator.locator('.spectator-current .eyebrow')).toContainText(hostCourt);
   await expect(spectator.locator('.spectator-live-meta strong')).toHaveText(/^\d{2}:\d{2}$/);
   await expect(spectator.locator('.spectator-progress')).toContainText('0 / 3 games');
