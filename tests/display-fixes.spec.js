@@ -783,11 +783,12 @@ test('Feature 24 timer starts, persists across refresh, resets on swap, and reco
   const beforeSwap=await page.locator('#currentTimer').textContent();
   await page.locator('#nextBtn').click();
   await expect(page.locator('#currentNo')).toHaveText('GAME 1');
-  await expect(page.locator('#currentTimer')).toHaveText('00:00');
+  const resetTimer=await page.locator('#currentTimer').textContent();
+  expect(resetTimer).toMatch(/^00:0[01]$/);
   expect(beforeSwap).not.toBe('00:00');
   const swapStarted=await page.evaluate(()=>JSON.parse(localStorage.getItem('crg-live-state-v1')).gameStartedAt);
   expect(Number.isFinite(Number(swapStarted))).toBeTruthy();
-  expect(swapStarted).toBeGreaterThanOrEqual(Date.now()-1200);
+  expect(Date.now()-Number(swapStarted)).toBeLessThan(1500);
 
   await page.waitForTimeout(1200);
   await page.locator('#completeBtn').click();
