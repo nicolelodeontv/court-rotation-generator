@@ -178,6 +178,8 @@ test('Ranks Share results works before results and remains live after standings 
   await expect.poll(() => shared.locator('.live-leaderboard-empty').count(), { timeout: 7000 }).toBe(0);
   await expect.poll(() => shared.locator('.rankings-list .rank-row').first().innerText(), { timeout: 7000 }).toMatch(/1W/);
 
+  await page.locator('[data-view="rankingsView"]').click();
+  await expect(page.locator('#rankingsView')).toHaveClass(/active/);
   await page.locator('#shareRankingsBtn').click();
   await expect(page.locator('.sheet.final-share')).toBeVisible();
   await expect(page.locator('#liveLeaderboardShareQr svg')).toBeVisible();
