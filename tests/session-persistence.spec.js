@@ -95,8 +95,6 @@ test.describe('session persistence across refresh', () => {
       await page.locator(`#scheduleList [data-result="${i}"]`).click();
       await page.locator('#sheetContent [data-winner="0"]').click();
     }
-    await page.locator('[data-view="liveView"]').click();
-    await page.locator('#completeCloseBtn').click();
     await page.locator('#completeCloseBtn').click();
     await page.locator('[data-view="liveView"]').click();
     await expect(page.locator('#progressText')).toHaveText('15 / 15 games');
