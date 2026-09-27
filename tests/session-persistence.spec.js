@@ -19,6 +19,10 @@ async function currentPlayerNames(page) {
   return (await page.locator('#currentTeams .live-player-name').allTextContents()).map(v => v.trim());
 }
 
+async function normalizedText(page, selector) {
+  return (await page.locator(selector).innerText()).replace(/\s+/g, ' ').trim();
+}
+
 test.describe('session persistence across refresh', () => {
   test('fresh state stays on Setup and never renders Session Complete', async ({ page }) => {
     await page.goto('/');
@@ -50,7 +54,7 @@ test.describe('session persistence across refresh', () => {
     await expect(page.locator('#currentNo')).toHaveText('GAME 1');
     await expect(page.locator('#progressText')).toHaveText('0 / 15 games');
     await expect.poll(() => currentPlayerNames(page)).toEqual(before.current);
-    await expect.poll(() => page.locator('#upNextList').innerText()).toEqual(before.upNext);
+    await expect.poll(() => normalizedText(page, '#upNextList')).toEqual(before.upNext);
     await expect(page.locator('#stickyGame')).toHaveText(before.sticky);
     await expect(page.locator('#liveStatus')).toHaveText('NEXT UP');
     await expect(page.locator('#currentNo')).not.toContainText('SESSION COMPLETE');
@@ -64,6 +68,8 @@ test.describe('session persistence across refresh', () => {
       await page.locator('#sheetContent [data-winner="0"]').click();
       await expect(page.locator('#progressText')).toHaveText(`${i + 1} / 15 games`);
     }
+    await page.locator('[data-view="liveView"]').click();
+    await expect(page.locator('#liveView')).toHaveClass(/active/);
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('crg-session-v4') || 'null'));
     expect(saved?.phase).toBe('in-progress');
     expect(saved?.done).toEqual([0, 1, 2, 3, 4]);
@@ -89,6 +95,8 @@ test.describe('session persistence across refresh', () => {
       await page.locator(`#scheduleList [data-result="${i}"]`).click();
       await page.locator('#sheetContent [data-winner="0"]').click();
     }
+    await page.locator('[data-view="liveView"]').click();
+    await page.locator('#completeCloseBtn').click();
     await page.locator('[data-view="liveView"]').click();
     await expect(page.locator('#progressText')).toHaveText('15 / 15 games');
     await expect(page.locator('#currentNo')).toHaveText('✓ SESSION COMPLETE');
