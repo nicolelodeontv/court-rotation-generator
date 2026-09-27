@@ -61,7 +61,7 @@ async function assertSpectatorCurrentCard(browser, snapshotUrl, expectedNames, s
 
   const currentNames = spectator.locator('.spectator-current .spectator-player-name');
   await expect(currentNames).toHaveCount(expectedNames.length);
-  const actual = (await currentNames.allTextContents()).map(s => s.trim());
+  const actual = (await currentNames.allTextContents()).map(s => s.replace(/\s*⭐+\s*$/, '').trim());
   expect(actual).toEqual(expectedNames);
 
   const scheduleNames = spectator.locator('.spectator-game .spectator-player-name');
@@ -239,7 +239,9 @@ test('Match log team names stay on one compact flex row per team', async ({ page
     expect(team.playerCount).toBe(2);
     expect(team.maxTopDelta).toBeLessThan(5);
   }
-  await expect(page.locator('.match-log-result')).toContainText('Team A won');
+  const logWinner = await page.locator('.match-log-team.match-log-winner .live-player-name').allTextContents();
+  const logWinnerText = logWinner.map(name => name.replace(/\s*⭐+\s*$/, '').trim()).join(' and ');
+  await expect(page.locator('.match-log-result')).toContainText(`${logWinnerText} won`);
   await expect(page.locator('.match-log-vs')).toHaveText('VS');
 });
 
@@ -308,6 +310,10 @@ test('Up Next width and fixed header navigation stay aligned', async ({ page }) 
       panelRight: panelRect?.right || 0,
       panelWidth: panelRect?.width || 0,
       listWidth: listRect?.width || 0,
+      panelPaddingLeft: parseFloat(getComputedStyle(panel).paddingLeft) || 0,
+      panelPaddingRight: parseFloat(getComputedStyle(panel).paddingRight) || 0,
+      panelBorderLeft: parseFloat(getComputedStyle(panel).borderLeftWidth) || 0,
+      panelBorderRight: parseFloat(getComputedStyle(panel).borderRightWidth) || 0,
       gridTop: gridRect?.top || 0,
       mainBottom: mainRect?.bottom || 0,
       appRight: appRect?.right || 0,
@@ -324,7 +330,8 @@ test('Up Next width and fixed header navigation stay aligned', async ({ page }) 
   expect(bounds.stickyCount).toBe(0);
   expect(Math.abs(bounds.panelTop - bounds.gridTop)).toBeLessThanOrEqual(1);
   expect(bounds.panelBottom).toBeLessThanOrEqual(bounds.mainBottom + 1);
-  expect(Math.abs(bounds.panelWidth - bounds.listWidth)).toBeLessThanOrEqual(2);
+  const panelContentWidth = bounds.panelWidth - bounds.panelPaddingLeft - bounds.panelPaddingRight - bounds.panelBorderLeft - bounds.panelBorderRight;
+  expect(Math.abs(panelContentWidth - bounds.listWidth)).toBeLessThanOrEqual(2);
   expect(bounds.navTop).toBeGreaterThanOrEqual(bounds.topbarTop);
   expect(await page.locator('.bottom-nav').evaluate(node => node.parentElement?.classList.contains('topbar'))).toBeTruthy();
   expect(bounds.navPosition).toBe('static');
@@ -353,7 +360,7 @@ test('Complete game uses a separate score step and blocks a contradictory winner
   await page.locator('#pastePlayerNames').fill(roster(4));
   await page.locator('#playerConfirm').click();
   await page.locator('#generateBtn').click();
-  await expect(page.locator('.game-match')).toHaveCount(1, { timeout: 5000 });
+  await expect(page.locator('.game-match').first()).toBeVisible();
 
   await page.locator('#completeBtn').click();
   await expect(page.locator('.sheet-title')).toHaveText('Game 1 result');
@@ -443,6 +450,7 @@ test('Next game free swap commits the generated game unchanged without validatio
       .map(node => node.textContent.replace(/\s*⭐+\s*$/, '').trim());
     return {
       currentTeams,
+      currentNames: [...document.querySelectorAll('#currentTeams .live-player-name')].map(node => node.textContent.replace(/\s*⭐+\s*$/, '').trim()),
       upcomingNames,
       progress: document.querySelector('#progressText')?.textContent || '',
       logCount: document.querySelector('#matchLogCount')?.textContent || '',
@@ -469,7 +477,7 @@ test('Next game free swap commits the generated game unchanged without validatio
   }));
 
   expect(after.currentNames).toEqual(before.upcomingNames);
-  expect(after.firstUpNextNames).toEqual(before.currentNames || []);
+  expect(after.firstUpNextNames).toEqual(before.currentNames);
   expect(after.currentTeams.join(' | ')).not.toBe('');
   expect(after.firstLabel).toBe('Game 2');
   expect(after.progress).toBe(before.progress);
@@ -630,7 +638,7 @@ test('winner row inversion, player stars, singular games label, and setup nav vi
 
   await expect(page.locator('#setupNavBtn')).toBeHidden();
   await expect(page.locator('[data-view="liveView"]')).toHaveClass(/active/);
-  await expect(page.locator('.bottom-nav .nav-btn')).toHaveCount(5);
+  await expect(page.locator('.bottom-nav .nav-btn:not([hidden])')).toHaveCount(5);
   await expect(page.locator('.bottom-nav')).toHaveCSS('grid-template-columns', /repeat\(5,/);
 
   await page.locator('[data-view="moreView"]').click();

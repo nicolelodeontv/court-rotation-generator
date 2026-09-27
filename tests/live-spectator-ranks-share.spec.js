@@ -3,7 +3,7 @@ const path = require('path');
 const vm = require('vm');
 const { test, expect } = require('@playwright/test');
 
-const roster = count => Array.from({ length: count }, (_, i) => 'Player ' + (i + 1)).join('\\n');
+const roster = count => Array.from({ length: count }, (_, i) => 'Player ' + (i + 1)).join('\n');
 
 test('live-sync script parses as valid browser JavaScript', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'live-sync.js'), 'utf8');
