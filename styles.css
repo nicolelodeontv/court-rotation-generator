@@ -131,3 +131,9 @@ body.setup-nav-hidden .bottom-nav{grid-template-columns:repeat(5,minmax(0,1fr))}
 
 /* Feature 20: subtle result badge for games that reached deuce territory. */
 .deuce-badge{display:inline-flex;align-items:center;justify-content:center;margin-left:7px;padding:4px 7px;border:1px solid var(--accent-border);border-radius:999px;background:var(--accent-surface);color:var(--accent-soft);font:800 10px/1 var(--font-body);white-space:nowrap;vertical-align:1px}
+
+
+/* Feature 22: collapse the desktop Live grid when there are no upcoming games. */
+@media(min-width:768px){#liveView .live-grid.no-upcoming{grid-template-columns:minmax(0,1fr)}#liveView .live-grid.no-upcoming .live-main-column{grid-column:1/-1}}
+#liveView .live-upnext-column[hidden]{display:none!important}
+.topbar .bottom-nav{align-self:center}

@@ -802,3 +802,37 @@ test('Feature 21 adds final rankings share and safe reset actions', async ({ pag
   await expect(page.locator('#scheduleList .game-row')).toHaveCount(0);
   await expect(page.locator('#rankingsList .rank-row')).toHaveCount(0);
 });
+
+
+test('Feature 22 hides Up Next when there are no upcoming games and restores it when games return', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+  await page.locator('#playerPasteBtn').click();
+  await page.locator('#pastePlayerNames').fill(roster(8));
+  await page.locator('#playerConfirm').click();
+  await page.locator('#generateBtn').click();
+  await expect(page.locator('.game-match')).toHaveCount(12, { timeout: 5000 });
+  await expect(page.locator('#liveView .live-upnext-column')).toBeVisible();
+
+  for (let i = 0; i < 12; i++) {
+    await page.locator('#completeBtn').click();
+    await page.locator('[data-winner="0"]').click();
+    await page.locator('#scoreA').fill('11');
+    await page.locator('#scoreB').fill('7');
+    await page.locator('#scoreConfirm').click();
+  }
+  await expect(page.locator('.sheet.final-rankings')).toBeVisible();
+  await page.locator('#completeCloseBtn').click();
+  await expect(page.locator('#liveView .live-upnext-column')).toBeHidden();
+  await expect(page.locator('#liveView .live-grid')).toHaveClass(/no-upcoming/);
+  const completeLayout=await page.evaluate(()=>{const grid=document.querySelector('#liveView .live-grid')?.getBoundingClientRect();const main=document.querySelector('#liveView .live-main-column')?.getBoundingClientRect();return{gridWidth:grid?.width||0,mainWidth:main?.width||0}});
+  expect(Math.abs(completeLayout.gridWidth-completeLayout.mainWidth)).toBeLessThanOrEqual(1);
+
+  await page.locator('[data-view="moreView"]').click();
+  await page.locator('#manageSessionBtn').click();
+  await page.locator('#games').fill('2');
+  await page.locator('#generateBtn').click();
+  await expect(page.locator('#liveView .live-upnext-column')).toBeVisible();
+  await expect(page.locator('#liveView .live-grid')).not.toHaveClass(/no-upcoming/);
+});
