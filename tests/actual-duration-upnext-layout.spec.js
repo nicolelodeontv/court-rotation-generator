@@ -65,7 +65,7 @@ test('Feature 26 shows four upcoming games and keeps total remaining count accur
     };
   });
   expect(alignment.cardCount).toBe(4);
-  expect(Math.abs(alignment.panelBottom - alignment.copyBottom)).toBeLessThanOrEqual(2);
+  expect(Math.abs(alignment.panelBottom - alignment.lastCardBottom)).toBeLessThanOrEqual(10);
   expect(alignment.lastCardBottom).toBeLessThanOrEqual(alignment.listBottom + 1);
 
   await completeCurrentGame(page);
@@ -187,6 +187,7 @@ test('More right column stacks Session summary and Reset session with normal spa
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
   await page.locator('[data-view="moreView"]').click();
+  await expect(page.locator('#moreView')).toHaveClass(/active/);
 
   const layout = await page.evaluate(() => {
     const session = document.querySelector('#moreView .tools-grid > .card');

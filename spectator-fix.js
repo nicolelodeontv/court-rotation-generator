@@ -25,7 +25,8 @@ function injectStyle(){if(document.getElementById('spectatorFixStyles'))return;c
 function boot(){injectStyle();transferLiveLinkButton();const spectator=new URLSearchParams(location.search).get('view')==='spectator';if(spectator){polish();
 // Safe observer: polish is convergent; it replaces winner text once and only adds idempotent classes, so later mutations settle.
 new MutationObserver(()=>polish()).observe(document.body,{subtree:true,childList:true,characterData:true});return}
-// Safe observer: the callback only transfers a link once and queues a deduplicated publish; it does not write the observed DOM subtree.
-new MutationObserver(()=>{transferLiveLinkButton();queue()}).observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class','style']});queue()}
+// Live host publishing is handled by live-sync.js from canonical app state.
+// Keep this legacy module out of the host publish path to avoid DOM-snapshot races.
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
