@@ -107,7 +107,7 @@ test('Up Next free reorder moves the whole generated game without validation blo
 
   await expect(page.locator('.upnext-swap')).toHaveCount(0);
   await expect(page.locator('[data-swap-game]')).toHaveCount(0);
-  await expect(page.locator('#upNextList .drag-handle')).toHaveCount(3);
+  await expect(page.locator('#upNextList .drag-handle')).toHaveCount(4);
 
   const source = page.locator('#upNextList .next-item[data-upcoming-index="1"]');
   const target = page.locator('#upNextList .next-item[data-upcoming-index="3"]');
@@ -149,8 +149,8 @@ test('Up Next free reorder moves the whole generated game without validation blo
   await page.mouse.up();
   await expect(page.locator('.upnext-dragging-card')).toHaveCount(0);
   await expect(page.locator('.upnext-drag-placeholder')).toHaveCount(0);
-  await expect(page.locator('#upNextList .next-item[data-upcoming-index]')).toHaveCount(3);
-  await expect(page.locator('#upNextList .next-item > span:first-child')).toHaveText(['Game 2', 'Game 3', 'Game 4']);
+  await expect(page.locator('#upNextList .next-item[data-upcoming-index]')).toHaveCount(4);
+  await expect(page.locator('#upNextList .next-item > span:first-child')).toHaveText(['Game 2', 'Game 3', 'Game 4', 'Game 5']);
 
   const after = await page.evaluate(() => {
     const row = document.querySelector('#scheduleList .game-row:nth-child(4)');
