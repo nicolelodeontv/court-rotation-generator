@@ -140,3 +140,32 @@ body.setup-nav-hidden .bottom-nav{grid-template-columns:repeat(5,minmax(0,1fr))}
 
 .rank-header-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;min-width:0}.rank-header-actions .rank-note{white-space:nowrap}.rank-share-btn{white-space:nowrap}
 @media(max-width:700px){#rankingsView>.section-top{align-items:flex-start}.rank-header-actions{flex-wrap:wrap;justify-content:flex-end}.rank-header-actions .rank-note{white-space:normal;text-align:right}.rank-share-btn{flex:0 0 auto}}
+
+.shared-live-page{width:min(1200px,100%);margin:0 auto;padding:24px}
+.shared-live-page .card{min-width:0}
+.live-spectator-card,.live-leaderboard-page{padding:clamp(18px,3vw,28px)}
+.live-spectator-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;min-width:0}
+.live-spectator-heading h1{margin:0 0 5px;font:700 clamp(30px,5vw,54px)/1 var(--font-headline);letter-spacing:-.04em}
+.live-pill{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--accent-border);background:var(--accent-surface);color:var(--accent-ink);border-radius:999px;padding:6px 9px;font:900 10px/1 var(--font-body);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.spectator-live-timer-wrap{display:flex;flex-direction:column;align-items:flex-end;min-width:110px}
+.spectator-live-timer-wrap .eyebrow{margin-bottom:5px}
+.spectator-live-timer-wrap strong{font:900 clamp(24px,4vw,36px)/1 var(--font-body);font-variant-numeric:tabular-nums;letter-spacing:.04em}
+.spectator-current{margin-top:var(--section-gap)}
+.spectator-current h2{margin:0;font:800 clamp(24px,4vw,42px)/1.05 var(--font-headline);letter-spacing:-.035em}
+.spectator-progress-wrap{margin:var(--section-gap) 0 0}
+.spectator-progress-label{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:7px;font-size:12px}
+.spectator-progress{height:8px;border-radius:999px;overflow:hidden;background:var(--surface-2);border:1px solid var(--line)}
+.spectator-progress>span{display:block;height:100%;background:var(--accent);border-radius:inherit}
+.spectator-schedule{display:grid;gap:12px;margin-top:var(--section-gap)}
+.spectator-leaderboard{margin-top:var(--section-gap)}
+.spectator-leaderboard .rank-row,.live-leaderboard-page .rank-row{margin-top:8px}
+.live-leaderboard-empty{margin:14px 0 0;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--surface-2)}
+.spectator-updated{margin:14px 0 0;text-align:right}
+.live-spectator-error{max-width:720px;margin:0 auto;text-align:center}
+.rank-header-actions{min-width:0}
+@media(max-width:700px){
+  .shared-live-page{padding:16px}
+  .live-spectator-heading{flex-direction:column}
+  .spectator-live-timer-wrap{align-items:flex-start}
+  .rank-header-actions{width:100%}
+}
