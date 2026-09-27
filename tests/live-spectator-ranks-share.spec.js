@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 
-const roster = count => Array.from({ length: count }, (_, i) => \`Player \${i + 1}\`).join('\\n');
+const roster = count => Array.from({ length: count }, (_, i) => 'Player ' + (i + 1)).join('\n');
 
 async function mockSupabase(context) {
   await context.addInitScript(() => {
