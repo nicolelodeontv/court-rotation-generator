@@ -16,3 +16,24 @@ jobs:
       - run: npm install
       - run: npx playwright install --with-deps chromium
       - run: npm test
+
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Node syntax checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in ./*.js; do
+            node --check "$file"
+          done
+      - name: ESLint v8 no-undef checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx -y eslint@8.57.0 --no-eslintrc --env browser --env es2020 --rule 'no-undef: error' ./*.js
+          npx -y eslint@8.57.0 --no-eslintrc --env es2020 --env serviceworker --rule 'no-undef: error' sw.js

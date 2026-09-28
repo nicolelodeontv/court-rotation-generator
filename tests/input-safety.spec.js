@@ -12,12 +12,12 @@ async function addPlayer(page, value) {
 
 test('visible Add player and mid-session Add player enforce the 40-character limit', async ({ page }) => {
   await page.goto('/');
+  for (const player of ['Bob', 'Carol', 'Dave', 'Eve', 'Frank', 'Grace', 'Heidi']) {
+    await addPlayer(page, player);
+  }
   await addPlayer(page, LONG_ADD_NAME);
-  await addPlayer(page, 'Bob');
-  await addPlayer(page, 'Carol');
-  await addPlayer(page, 'Dave');
 
-  await expect(page.locator('.player-row')).toHaveCount(4);
+  await expect(page.locator('.player-row')).toHaveCount(8);
   const initialLengths = await page.locator('.player-row .player-name').evaluateAll(nodes =>
     nodes.map(node => [...node.textContent.trim()].length)
   );
@@ -25,19 +25,33 @@ test('visible Add player and mid-session Add player enforce the 40-character lim
   await expect(page.locator('#setupStatus')).toContainText('40 characters');
 
   await page.locator('#generateBtn').click();
-  await expect(page.locator('.game-match')).toHaveCount(3, { timeout: 5000 });
+  await expect(page.locator('.game-match').first()).toBeVisible({ timeout: 5000 });
 
   await page.locator('#addMidSessionPlayerBtn').click();
   await page.locator('#midSessionPlayerName').fill(LONG_MID_NAME);
   await page.locator('#midPlayerConfirm').click();
 
-  await expect(page.locator('#playerList .player-row')).toHaveCount(5);
+  await expect(page.locator('#playerList .player-row')).toHaveCount(9);
   const finalNames = await page.locator('#playerList .player-name').evaluateAll(nodes =>
     nodes.map(node => node.textContent.trim())
   );
   expect(Math.max(...finalNames.map(value => [...value].length))).toBeLessThanOrEqual(40);
   expect(finalNames).toContain('Mid ' + 'y'.repeat(36));
   await expect(page.locator('#setupStatus')).toContainText('40 characters');
+});
+
+test('mid-session Add rolls back cleanly when the new player cannot fit', async ({ page }) => {
+  await page.goto('/');
+  for (const player of ['Alice', 'Bob', 'Carol', 'Dave']) await addPlayer(page, player);
+  await page.locator('#generateBtn').click();
+  await expect(page.locator('.game-match')).toHaveCount(3, { timeout: 5000 });
+
+  await page.locator('#addMidSessionPlayerBtn').click();
+  await page.locator('#midSessionPlayerName').fill('New Player');
+  await page.locator('#midPlayerConfirm').click();
+
+  await expect(page.locator('#playerList .player-row')).toHaveCount(4);
+  await expect(page.locator('#midPlayerError')).toContainText('Could not fairly fit the new player');
 });
 
 test('visible Paste names caps the roster at 40 and reports both limits', async ({ page }) => {
@@ -103,28 +117,6 @@ test('restoring an old-format saved session generates a new code, migrates immed
     localStorage.setItem('crg-supabase-host-key-v1:' + code, 'legacy-test-secret');
     window.__crgRestoreSaveStacks = [];
   }, { savedState: saved, code: oldCode });
-
-  const pageErrors = [];
-  const consoleErrors = [];
-  page.on('pageerror', error => pageErrors.push(String(error?.stack || error)));
-  page.on('console', message => {
-    if (message.type() === 'error') consoleErrors.push(message.text());
-  });
-
-  await page.goto('/');
-
-  console.log('CRG-RESTORE-DIAG', JSON.stringify({
-    pageErrors,
-    consoleErrors,
-    storage: await page.evaluate(() => Object.fromEntries(
-      Object.keys(localStorage)
-        .filter(key => /^(crg-live-state-v1|crg-supabase-host-key-v1:)/.test(key))
-        .map(key => [key, localStorage.getItem(key)])
-    )),
-    activeView: await page.locator('.view.active').getAttribute('id').catch(() => null),
-    sessionCodeText: await page.locator('#sessionCodeText').textContent().catch(() => null),
-    setupStatus: await page.locator('#setupStatus').textContent().catch(() => null)
-  }));
 
   const label = await page.locator('#sessionCodeText').textContent();
   const code = String(label || '').match(/CRG-[A-Z0-9]+/)?.[0] || '';
