@@ -723,7 +723,26 @@ test('winner row inversion, player stars, singular games label, and setup nav vi
   expect(ranksStyles.chipBackground).toBe('rgb(42, 51, 40)');
   expect(ranksStyles.chipText).toBe('rgb(239, 234, 221)');
 
+  const pageErrors = [];
+  const consoleErrors = [];
+  page.on('pageerror', error => pageErrors.push(String(error?.stack || error)));
+  page.on('console', message => {
+    if (message.type() === 'error') consoleErrors.push(message.text());
+  });
   await page.reload();
+  console.log('CRG-RELOAD-DIAG', JSON.stringify({
+    pageErrors,
+    consoleErrors,
+    storage: await page.evaluate(() => Object.fromEntries(
+      Object.keys(localStorage)
+        .filter(key => /^(crg-live-state-v1|crg-supabase-host-key-v1:)/.test(key))
+        .map(key => [key, localStorage.getItem(key)])
+    )),
+    activeView: await page.locator('.view.active').getAttribute('id').catch(() => null),
+    sessionCodeText: await page.locator('#sessionCodeText').textContent().catch(() => null),
+    setupStatus: await page.locator('#setupStatus').textContent().catch(() => null),
+    sheetClass: await page.locator('#sheet').getAttribute('class').catch(() => null)
+  }));
   await expect(page.locator('.sheet.final-rankings')).toBeVisible();
   await page.locator('#completeCloseBtn').click();
   await expect(page.locator('#setupNavBtn')).toBeHidden();
