@@ -36,7 +36,7 @@ test('visible Add player and mid-session Add player enforce the 40-character lim
     nodes.map(node => node.textContent.trim())
   );
   expect(Math.max(...finalNames.map(value => [...value].length))).toBeLessThanOrEqual(40);
-  expect(finalNames).toContain('Mid ' + 'Y'.repeat(36));
+  expect(finalNames).toContain('Mid Y' + 'y'.repeat(35));
   await expect(page.locator('#setupStatus')).toContainText('40 characters');
 });
 
