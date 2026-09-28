@@ -101,3 +101,79 @@ body.upnext-drag-active{user-select:none}
   .drag-handle{right:9px;font-size:17px}
   .upnext-dragging-card{transform:scale(1.015)}
 }
+
+/* Release regression fix: balanced Live columns, content-sized rows with stable touch geometry, and mobile stacking. */
+@media(min-width:1101px){
+  #liveView .live-grid{display:grid!important;grid-template-columns:minmax(420px,1.3fr) minmax(320px,1fr)!important;gap:var(--section-gap);align-items:start}
+  #liveView .live-main-column,#liveView .live-upnext-column{width:100%;min-width:0;max-width:100%}
+}
+@media(max-width:1100px){
+  #liveView .live-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:var(--section-gap)}
+  #liveView .live-main-column,#liveView .live-upnext-column{width:100%;min-width:0;max-width:100%}
+}
+@media(max-width:700px){
+  #liveView .live-grid{display:block!important}
+  #liveView .live-main-column,#liveView .live-upnext-column{width:100%;min-width:0;max-width:100%}
+}
+#liveView .matchup .team{min-width:0;max-width:100%;overflow:hidden}
+#liveView .matchup .live-player-name{font-size:clamp(18px,2.2vw,30px);line-height:1.12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal;word-break:normal}
+#liveView .upnext{width:100%;max-width:100%;min-width:0}
+#liveView .upnext-list{width:100%;max-width:100%;min-width:0;gap:8px}
+#liveView .upnext-list .next-item{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;width:100%!important;min-width:0!important;max-width:100%!important;height:auto!important;min-height:50px!important;max-height:none!important;padding:10px 40px 10px 10px!important;box-sizing:border-box;overflow:hidden!important;white-space:nowrap;border:1px solid var(--accent-border);border-radius:var(--radius-md);line-height:1.2;gap:8px}
+#liveView .upnext-list .next-item>.upnext-game-no{display:inline-block!important;flex:0 0 auto!important;width:auto!important;max-width:5.2em!important;padding:0!important;text-align:left!important;white-space:nowrap!important;font-size:clamp(9px,1vw,12px)!important;line-height:1.2!important}
+#liveView .upnext-list .next-item>.upnext-matchup{display:flex!important;align-items:center!important;flex:1 1 auto!important;min-width:0!important;width:auto!important;max-width:none!important;overflow:hidden!important;white-space:nowrap!important;line-height:1.2!important;font-size:clamp(9px,1vw,12px)!important}
+#liveView .upnext-list .next-item .live-player-name{display:inline-flex!important;align-items:baseline!important;flex:1 1 0!important;min-width:0!important;max-width:none!important;overflow:hidden!important;white-space:nowrap!important;text-overflow:ellipsis!important;overflow-wrap:normal!important;word-break:normal!important;font:800 clamp(9px,1vw,12px)/1.2 var(--font-body)!important}
+#liveView .upnext-list .next-item .upnext-player-name-text{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#liveView .upnext-list .next-item .live-player-stars{display:inline-block;flex:0 0 auto;white-space:nowrap;font-size:.72em!important;line-height:1!important}
+#liveView .upnext-list .next-item .upnext-and,#liveView .upnext-list .next-item .upnext-vs{display:inline-flex!important;flex:0 0 auto!important;white-space:nowrap!important;line-height:1.2!important}
+#liveView .upnext-list .next-item .drag-handle{right:9px!important;top:50%!important;width:20px!important;min-width:20px!important;touch-action:none!important}
+html,body{max-width:100%;overflow-x:hidden}
+
+/* Release regression fix: shared spectator cards and word-safe prominent names. */
+.spectator-layout{display:grid!important;gap:var(--section-gap)!important;min-width:0;max-width:100%}
+.spectator-section{margin:0!important;padding:var(--card-pad)!important;border-radius:var(--radius-lg)!important;min-width:0;max-width:100%;overflow:hidden}
+.spectator-game-list{display:grid!important;gap:var(--section-gap)!important;min-width:0}
+.spectator-game-list .spectator-game{margin:0!important}
+.spectator-matchup{display:grid!important;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)!important;gap:clamp(10px,2vw,24px)!important;align-items:stretch!important;min-width:0;width:100%}
+.spectator-team{min-width:0;max-width:100%;padding:clamp(12px,2vw,20px);border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--surface-2);display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden}
+.spectator-team-players{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:6px!important;min-width:0;max-width:100%;width:100%}
+.spectator-player{display:block!important;min-width:0;max-width:100%;width:100%;white-space:nowrap!important}
+.spectator-player-name{display:inline-flex!important;align-items:baseline;justify-content:center;max-width:100%;font:900 clamp(20px,2.7vw,32px)/1.1 var(--font-headline);letter-spacing:-.025em;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal!important;word-break:normal!important}
+.spectator-player-name small{display:inline-block!important;margin-left:.25em;font:900 .62em/1 var(--font-body);white-space:nowrap;flex:0 0 auto;color:var(--accent-soft)}
+.spectator-and{display:block;font:800 clamp(11px,1.2vw,14px)/1.2 var(--font-body);color:var(--muted)}
+.spectator-vs{align-self:center;font:950 clamp(11px,1.2vw,14px)/1 var(--font-body);color:var(--muted);white-space:nowrap}
+.spectator-result-summary{margin:12px 0 0;font-weight:900;font-size:clamp(13px,1.4vw,17px);line-height:1.35;overflow-wrap:normal;word-break:normal}
+.spectator-inline-player{display:inline-flex;align-items:baseline;min-width:0;max-width:10.5em;white-space:nowrap;font-size:clamp(14px,1.6vw,21px);font-weight:900;line-height:1.15}
+.spectator-inline-player-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;overflow-wrap:normal;word-break:normal}
+.spectator-inline-player small{flex:0 0 auto;margin-left:.2em;font-size:.62em;white-space:nowrap}
+.spectator-inline-sep,.spectator-inline-vs{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;font-size:clamp(11px,1.1vw,14px);font-weight:800;color:var(--muted);margin-inline:.28em}
+.spectator-inline-vs{font-weight:950;margin-inline:.4em}
+.spectator-upnext-row{display:flex;align-items:center;gap:10px;min-width:0;padding:9px 0;border-top:1px solid var(--line)}
+.spectator-upnext-row:first-child,.spectator-log-row:first-child{border-top:0}
+.spectator-upnext-row>b{flex:0 0 auto;font-size:11px;white-space:nowrap}
+.spectator-upnext-matchup{display:flex;align-items:center;min-width:0;overflow:hidden;white-space:nowrap}
+.spectator-upnext-matchup .spectator-inline-player{font-size:clamp(13px,1.5vw,19px)}
+.spectator-log-row{padding:10px 0;border-top:1px solid var(--line);min-width:0}
+.spectator-log-head{display:flex;justify-content:space-between;gap:10px;font-size:11px}
+.spectator-log-matchup{min-width:0;overflow:hidden;white-space:nowrap;margin-top:7px}
+.spectator-log-matchup .spectator-inline-player{font-size:clamp(14px,1.6vw,20px)}
+.spectator-log-row .spectator-result-summary{margin:8px 0 0}
+@media(max-width:700px){
+  .spectator-section{padding:clamp(14px,4vw,18px)!important}
+  .spectator-matchup{gap:8px!important}
+  .spectator-team{padding:clamp(10px,3vw,14px)}
+  .spectator-player-name{font-size:clamp(18px,6vw,25px)}
+  .spectator-current h2{font-size:clamp(26px,8vw,40px)}
+  .spectator-inline-player{font-size:clamp(12px,3.9vw,17px)}
+  .spectator-upnext-row,.spectator-log-row{gap:7px}
+}
+@media(max-width:360px){
+  #liveView .upnext-list .next-item{padding-inline:8px 38px!important}
+  #liveView .upnext-list .next-item>.upnext-game-no{font-size:9px!important}
+  #liveView .upnext-list .next-item>.upnext-matchup{font-size:9px!important}
+  #liveView .upnext-list .next-item .live-player-name{font-size:9px!important}
+  .spectator-section{padding:12px!important}
+  .spectator-matchup{gap:6px!important}
+  .spectator-player-name{font-size:18px}
+  .spectator-inline-player{font-size:11px}
+}

@@ -61,7 +61,7 @@ async function assertSpectatorCurrentCard(browser, snapshotUrl, expectedNames, s
 
   const currentNames = spectator.locator('.spectator-current .spectator-player-name');
   await expect(currentNames).toHaveCount(expectedNames.length);
-  const actual = (await currentNames.allTextContents()).map(s => s.replace(/\s*⭐+\s*$/, '').trim());
+  const actual = (await currentNames.allTextContents()).map(s => s.replace(/\s+⭐+.*$/, '').trim());
   expect(actual).toEqual(expectedNames);
 
   const scheduleNames = spectator.locator('.spectator-game .spectator-player-name');
@@ -259,7 +259,7 @@ test('Match log team names stay on one compact flex row per team', async ({ page
   }
   const logWinner = await page.locator('.match-log-team.match-log-winner .live-player-name').allTextContents();
   const logWinnerText = logWinner.map(name => name.replace(/\s*⭐+\s*$/, '').trim()).join(' and ');
-  await expect(page.locator('.match-log-result')).toContainText(`${logWinnerText} won`);
+  await expect(page.locator('.match-log-result')).toContainText(`Winner: ${logWinnerText}`);
   await expect(page.locator('.match-log-vs')).toHaveText('VS');
 });
 
@@ -383,7 +383,7 @@ test('Complete game uses a separate score step and blocks a contradictory winner
   await page.locator('#completeBtn').click();
   await expect(page.locator('.sheet-title')).toHaveText('Game 1 result');
   await page.locator('[data-winner="0"]').click();
-  await expect(page.locator('.sheet-title')).toHaveText('Enter score');
+  await expect(page.locator('.sheet-title')).toHaveText('Enter final score');
   await expect(page.locator('.winner-badge')).toHaveText('✓ Winner');
   await expect(page.locator('#matchLogCount')).toHaveText('0');
   await page.locator('#scoreA').fill('5');
@@ -405,7 +405,8 @@ test('Complete game uses a separate score step and blocks a contradictory winner
   const winnerNames = await page.locator('.match-log-team.match-log-winner .live-player-name').allTextContents();
   expect(winnerNames).toHaveLength(2);
   const winnerText = winnerNames.map(name => name.replace(/\s*⭐+\s*$/, '').trim()).join(' and ');
-  await expect(page.locator('.match-log-result')).toContainText(`${winnerText} won · 11-7`);
+  await expect(page.locator('.match-log-result')).toContainText(`Winner: ${winnerText}`);
+  await expect(page.locator('.match-log-result')).toContainText('11 – 7');
   await expect(page.locator('.match-log-result')).not.toContainText('⭐');
 });
 

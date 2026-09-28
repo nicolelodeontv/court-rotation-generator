@@ -77,7 +77,7 @@ async function completeCurrentGame(page) {
 
 async function currentNames(page) {
   return page.locator('#currentTeams .live-player-name').evaluateAll(nodes =>
-    nodes.map(node => (node.textContent || '').replace(/\s*⭐+\s*$/, '').trim())
+    nodes.map(node => (node.childNodes[0]?.textContent || node.textContent || '').replace(/\s+$/, '').trim())
   );
 }
 
@@ -134,7 +134,8 @@ test('Live spectator link shows current game details and updates after a complet
   await expect(spectator.locator('.spectator-current h2')).toHaveText(hostGame);
   await expect(spectator.locator('.spectator-current .eyebrow')).toContainText(hostCourt);
   await expect(spectator.locator('.spectator-current .spectator-player-name')).toHaveCount(4);
-  expect(await spectator.locator('.spectator-current .spectator-player-name').allTextContents()).toEqual(hostNames);
+  const sharedNames=await spectator.locator('.spectator-current .spectator-player-name').evaluateAll(nodes=>nodes.map(node=>(node.childNodes[0]?.textContent||node.textContent||'').replace(/\s+$/,'').trim()));
+  expect(sharedNames).toEqual(hostNames);
 
   const stars = await spectator.locator('.spectator-current .spectator-player small').allTextContents();
   expect(stars).toHaveLength(4);
@@ -147,7 +148,7 @@ test('Live spectator link shows current game details and updates after a complet
   await expect(page.locator('#currentNo')).toHaveText('GAME 2');
   await expect.poll(() => spectator.locator('.spectator-current h2').textContent(), { timeout: 7000 }).toBe('GAME 2');
   await expect.poll(() => spectator.locator('.spectator-progress-label').textContent(), { timeout: 7000 }).toContain('1 / 12 games');
-  await expect.poll(async () => spectator.locator('.spectator-current .spectator-player-name').allTextContents(), { timeout: 7000 }).toEqual(await currentNames(page));
+  await expect.poll(async () => spectator.locator('.spectator-current .spectator-player-name').evaluateAll(nodes=>nodes.map(node=>(node.childNodes[0]?.textContent||node.textContent||'').replace(/\s+$/,'').trim())), { timeout: 7000 }).toEqual(await currentNames(page));
 
   await spectator.close();
 });
