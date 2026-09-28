@@ -68,6 +68,17 @@ async function dragGame(page, sourceIndex, targetIndex, { move = true } = {}) {
   }
 
   await expect(page.locator('.upnext-dragging-card')).toHaveCount(1);
+  console.log(JSON.stringify(await page.evaluate(() => ({
+    list: [...document.querySelector('#upNextList').children].map(node => ({
+      tag: node.tagName,
+      game: node.dataset?.upcomingIndex || null,
+      placeholder: node.classList.contains('upnext-drag-placeholder'),
+      rect: (() => {
+        const r = node.getBoundingClientRect();
+        return { top: Math.round(r.top), bottom: Math.round(r.bottom), left: Math.round(r.left), right: Math.round(r.right) };
+      })(),
+    })),
+  })));
   await page.mouse.up();
 
   await expect(page.locator('.upnext-dragging-card')).toHaveCount(0);
