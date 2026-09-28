@@ -52,6 +52,11 @@ async function dragGame(page, sourceIndex, targetIndex, { move = true } = {}) {
     throw new Error('Could not measure Up Next drag targets');
   }
 
+  const dragPoint = {
+    x: targetRect.x + targetRect.width / 2,
+    y: targetRect.y + targetRect.height / 2,
+  };
+
   await page.mouse.move(
     sourceRect.x + sourceRect.width / 2,
     sourceRect.y + sourceRect.height / 2
@@ -61,13 +66,22 @@ async function dragGame(page, sourceIndex, targetIndex, { move = true } = {}) {
   // Drop in the upper half so the placeholder occupies the target's original slot.
   if (move) {
     await page.mouse.move(
-      targetRect.x + targetRect.width / 2,
-      targetRect.y + 6,
+      dragPoint.x,
+      dragPoint.y,
       { steps: 8 }
     );
   }
 
   await expect(page.locator('.upnext-dragging-card')).toHaveCount(1);
+  console.log(JSON.stringify(await page.evaluate(({ x, y }) => ({
+    scrollY: window.scrollY,
+    element: (() => {
+      const node = document.elementFromPoint(x, y);
+      const card = node?.closest?.('.next-item[data-upcoming-index]');
+      return card ? { game: card.dataset.upcomingIndex, classes: card.className } : { tag: node?.tagName || null, id: node?.id || null };
+    })(),
+    pointer: { x, y },
+  }), dragPoint)));
   await page.mouse.up();
 
   await expect(page.locator('.upnext-dragging-card')).toHaveCount(0);
