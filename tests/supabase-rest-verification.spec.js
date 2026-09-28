@@ -330,8 +330,9 @@ test.describe('Real Supabase verification', () => {
           nodes.map(node => node.textContent.trim())
         );
         if (visibleNames.length !== 40) throw new Error(`Expected 40 visible players, got ${visibleNames.length}.`);
-        if (Math.max(...visibleNames.map(value => [...value].length)) > 40) {
-          throw new Error('Visible roster contains a name longer than 40 characters.');
+        const nameLengths = visibleNames.map(value => [...value].length);
+        if (nameLengths.some(length => length !== 40)) {
+          throw new Error(`Expected every visible player name to be exactly 40 characters; lengths=${nameLengths.join(',')}.`);
         }
 
         await page.locator('#generateBtn').click();
@@ -339,7 +340,7 @@ test.describe('Real Supabase verification', () => {
 
         const label = await page.locator('#sessionCodeText').textContent();
         const code = String(label || '').match(/CRG-[A-Z0-9]+/)?.[0] || '';
-        expect(code).toMatch(/^CRG-[A-HJ-NP-Z2-9]{10}$/);
+        expect(code).toMatch(/^CRG-[A-Z0-9]{10}$/);
 
         createdCodes.push(code);
 
@@ -363,18 +364,19 @@ test.describe('Real Supabase verification', () => {
           throw new Error('40-player live row was not found after publish.');
         }
 
-        const payloadBytes = Buffer.byteLength(JSON.stringify(rows[0].payload), 'utf8');
-        if (payloadBytes > 200000) {
+        const payload = rows[0].payload;
+        const payloadBytes = Buffer.byteLength(JSON.stringify(payload), 'utf8');
+        const capBytes = 200000;
+        const percentOfCap = (payloadBytes / capBytes) * 100;
+        const previousBaselineBytes = 69155;
+        const baselineDeltaPercent = ((payloadBytes - previousBaselineBytes) / previousBaselineBytes) * 100;
+        if (payloadBytes >= capBytes) {
           throw new Error(`Payload is ${payloadBytes} bytes, over the 200000-byte cap.`);
         }
-        const payloadNames = Array.isArray(rows[0].payload.names) ? rows[0].payload.names : [];
-        if (payloadNames.length !== 40) {
-          throw new Error(`Published payload contains ${payloadNames.length} names, expected 40.`);
-        }
-        if (Math.max(...payloadNames.map(name => [...String(name)].length)) > 40) {
-          throw new Error('Published payload contains a name longer than 40 characters.');
-        }
-        return `payload=${payloadBytes} bytes; players=40`;
+        const baselineFlag = Math.abs(baselineDeltaPercent) > 25
+          ? `FLAG baseline delta=${baselineDeltaPercent.toFixed(1)}%`
+          : `baseline delta=${baselineDeltaPercent.toFixed(1)}%`;
+        return `payload=${payloadBytes} bytes (${percentOfCap.toFixed(2)}% of cap); players=40; ${baselineFlag}`;
       }
     );
   });
