@@ -1,4 +1,4 @@
-# Manual/branch-triggered verification; keep temporary until verification is complete.
+# Manual/branch-triggered verification; keep temporary until the real verification is complete.
 name: Real Supabase Verification
 
 on:
