@@ -24,7 +24,18 @@ async function generateSession(page) {
 }
 
 async function scheduleMatches(page) {
+  await page.waitForTimeout(50);
   return page.locator('#scheduleList .game-row .game-match').allTextContents();
+}
+
+async function snapshotMatches(page) {
+  return page.evaluate(() =>
+    (window.CRG_GET_LIVE_SNAPSHOT?.().schedule || []).map(game =>
+      game.teams
+        .map(team => team.map(player => player.name).join(' + '))
+        .join(' VS ')
+    )
+  );
 }
 
 async function dragGame(page, sourceIndex, targetIndex, { move = true } = {}) {
@@ -66,8 +77,10 @@ async function dragGame(page, sourceIndex, targetIndex, { move = true } = {}) {
 
 async function assertMovedToTarget(page, sourceGameNumber, targetGameNumber) {
   const before = await scheduleMatches(page);
+  const beforeSnapshot = await snapshotMatches(page);
   await dragGame(page, sourceGameNumber - 1, targetGameNumber - 1);
   const after = await scheduleMatches(page);
+  const afterSnapshot = await snapshotMatches(page);
 
   const expectedMatch = before[sourceGameNumber - 1];
   const actualPosition = after.findIndex(match => match === expectedMatch) + 1;
@@ -79,6 +92,8 @@ async function assertMovedToTarget(page, sourceGameNumber, targetGameNumber) {
     actualPosition,
     beforeOrder: before,
     afterOrder: after,
+    beforeSnapshot,
+    afterSnapshot,
   }));
 
   expect(actualPosition).toBe(targetGameNumber);
