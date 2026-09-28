@@ -35,5 +35,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx -y eslint@8.57.0 --no-eslintrc --env browser --env es2020 --rule 'no-undef: error' ./*.js
+          npx -y eslint@8.57.0 --no-eslintrc --env browser --env es2020 --rule 'no-undef: error' ./*.js --ignore-pattern playwright.config.js
+          npx -y eslint@8.57.0 --no-eslintrc --env node --env es2020 --rule 'no-undef: error' playwright.config.js
           npx -y eslint@8.57.0 --no-eslintrc --env es2020 --env serviceworker --rule 'no-undef: error' sw.js
