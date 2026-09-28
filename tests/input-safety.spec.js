@@ -25,7 +25,7 @@ test('visible Add player and mid-session Add player enforce the 40-character lim
   await expect(page.locator('#setupStatus')).toContainText('40 characters');
 
   await page.locator('#generateBtn').click();
-  await expect(page.locator('.game-match').first()).toBeVisible({ timeout: 5000 });
+  await expect(page.locator('#currentNo')).toHaveText('GAME 1', { timeout: 5000 });
 
   await page.locator('#addMidSessionPlayerBtn').click();
   await page.locator('#midSessionPlayerName').fill(LONG_MID_NAME);
