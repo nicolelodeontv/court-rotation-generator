@@ -24,7 +24,7 @@ test('live sync uses only the configured Supabase host', async ({ page }) => {
   await page.route('https://*.supabase.co/**', route => route.fulfill({
     status: 200,
     contentType: 'application/json',
-    body: JSON.stringify({ data: [{ payload: { sessionCode: 'CRG-TEST', updatedAt: new Date().toISOString(), current: { game: 'Game 1', court: 1, teams: [[{ name: 'A' }], [{ name: 'B' }]], sitting: [] }, progress: { completed: 0, total: 1, percent: 0 }, schedule: [], upNext: [], matchLog: [], rankings: [] } }], error: null }),
+    body: JSON.stringify({ payload: { sessionCode: 'CRG-TEST', updatedAt: new Date().toISOString(), current: { game: 'Game 1', court: 1, teams: [[{ name: 'A' }], [{ name: 'B' }]], sitting: [] }, progress: { completed: 0, total: 1, percent: 0 }, schedule: [], upNext: [], matchLog: [], rankings: [] }, updated_at: new Date().toISOString() }),
   }));
   await page.goto('/?live=CRG-TEST&view=spectator');
   await expect(page.locator('.spectator-current')).toBeVisible({ timeout: 5000 });
