@@ -114,7 +114,7 @@ test.describe('Real Supabase verification', () => {
         `/rest/v1/${TABLE}?select=*&session_code=eq.${encodeURIComponent(code)}`,
         { headers: { 'x-crg-session-code': code } }
       );
-      if (!response.ok()) throw new Error(`HTTP ${response.status()} ${firstLine(await response.text())}`);
+      if (!response.ok()) return `HTTP ${response.status()} ${firstLine(await response.text())}`;
       const rows = await response.json();
       if (rows.some(row => Object.prototype.hasOwnProperty.call(row, 'host_key'))) {
         throw new Error('Wildcard SELECT returned host_key.');
@@ -275,16 +275,17 @@ test.describe('Real Supabase verification', () => {
         const code = String(label || '').match(/CRG-[A-Z0-9]+/)?.[0] || '';
         expect(code).toMatch(/^CRG-[A-HJ-NP-Z2-9]{10}$/);
 
-        hostKey = await page.evaluate(currentCode =>
-          localStorage.getItem('crg-supabase-host-key-v1:' + currentCode) || '', code
-        );
-        expect(hostKey).toMatch(/^[0-9a-f]{64}$/);
         createdCodes.push(code);
 
         const publishResult = await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
         if (publishResult?.storageReady !== true) {
           throw new Error('CRG_PUBLISH_LIVE did not report storageReady=true.');
         }
+
+        hostKey = await page.evaluate(currentCode =>
+          localStorage.getItem('crg-supabase-host-key-v1:' + currentCode) || '', code
+        );
+        expect(hostKey).toMatch(/^[0-9a-f]{64}$/);
 
         const response = await rest(request, 'GET',
           `/rest/v1/${TABLE}?select=payload%2Cupdated_at&session_code=eq.${encodeURIComponent(code)}`,
@@ -340,16 +341,17 @@ test.describe('Real Supabase verification', () => {
         const code = String(label || '').match(/CRG-[A-Z0-9]+/)?.[0] || '';
         expect(code).toMatch(/^CRG-[A-HJ-NP-Z2-9]{10}$/);
 
-        hostKey = await page.evaluate(currentCode =>
-          localStorage.getItem('crg-supabase-host-key-v1:' + currentCode) || '', code
-        );
-        expect(hostKey).toMatch(/^[0-9a-f]{64}$/);
         createdCodes.push(code);
 
         const publishResult = await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
         if (publishResult?.storageReady !== true) {
           throw new Error('40-player live publish did not report storageReady=true.');
         }
+
+        hostKey = await page.evaluate(currentCode =>
+          localStorage.getItem('crg-supabase-host-key-v1:' + currentCode) || '', code
+        );
+        expect(hostKey).toMatch(/^[0-9a-f]{64}$/);
 
         const response = await rest(request, 'GET',
           `/rest/v1/${TABLE}?select=payload%2Cupdated_at&session_code=eq.${encodeURIComponent(code)}`,
