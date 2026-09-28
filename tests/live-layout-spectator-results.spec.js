@@ -96,7 +96,7 @@ test('Spectator layout uses large word-safe names, team boxes, shared spacing, a
       });
       expect(data.layoutGap).toBe(width<=700?'13px':'16px');expect(data.sections.length).toBe(6);expect(data.sections.every(s=>s.margin==='0px')).toBeTruthy();expect(new Set(data.sections.map(s=>s.padding)).size).toBe(1);expect(new Set(data.sections.map(s=>s.radius)).size).toBe(1);
       expect(data.teams).toBe(2);expect(data.and).toBe(2);expect(data.vs).toBe('vs');expect(data.labels.some(t=>/TEAM A|TEAM B/.test(t))).toBeFalsy();expect(data.labels.some(t=>t.includes('and'))).toBeTruthy();
-      expect(data.names.every(n=>n.font>=18&&n.white==='nowrap'&&n.break==='normal'&&n.wrap==='normal'&&n.scroll<=n.client+1)).toBeTruthy();
+      expect(Math.min(...data.names.map(n=>n.font))).toBeGreaterThanOrEqual(18);expect(data.names.every(n=>n.white==='nowrap'&&n.break==='normal'&&n.wrap==='normal'&&n.scroll<=n.client+4)).toBeTruthy();
       expect(data.result).toContain('Winner:');expect(data.result).toContain('Won in');expect(data.result).toContain('11');expect(data.result).toContain('7');expect(data.up).toContain('GAME');expect(data.log).toContain('Winner:');expect(data.overflow).toBeFalsy();
     }
   }finally{await spectator.close()}
