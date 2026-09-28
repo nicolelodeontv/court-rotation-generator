@@ -12,63 +12,38 @@ test('live-sync script parses as valid browser JavaScript', () => {
 
 async function installFakeSupabase(page) {
   await page.addInitScript(() => {
-    const STORAGE_KEY = '__crg_fake_live_session__';
-    const read = () => {
-      try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); }
-      catch { return null; }
-    };
-    const createClient = () => ({
-      from() {
-        return {
-          upsert: async row => {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(row));
-            return { data: row, error: null };
-          },
-          select() {
-            return {
-              eq(_field, code) {
-                return {
-                  maybeSingle: async () => {
-                    const row = read();
-                    return row && row.session_code === code
-                      ? { data: { payload: row.payload }, error: null }
-                      : { data: null, error: null };
-                  },
-                };
+    Object.defineProperty(window, 'supabase', {
+      configurable: true,
+      value: {
+        createClient: () => ({
+          channel: topic => {
+            const bc = new BroadcastChannel(topic);
+            const api = {
+              on(_type, config, handler) {
+                bc.addEventListener('message', event => {
+                  const data = event.data;
+                  if (data?.event === config?.event) handler({ payload: data.payload });
+                });
+                return api;
+              },
+              subscribe(callback) {
+                setTimeout(() => callback?.('SUBSCRIBED'), 0);
+                return api;
+              },
+              send(message) {
+                bc.postMessage(message);
+                return Promise.resolve('ok');
+              },
+              unsubscribe() {
+                try { bc.close(); } catch {}
+                return Promise.resolve();
               },
             };
-          },
-        };
-      },
-      channel() {
-        let callback = null;
-        const listeners = [];
-        const api = {
-          on(_event, _config, fn) {
-            callback = fn;
-            const listener = event => {
-              if (event.key !== STORAGE_KEY || !event.newValue || !callback) return;
-              try {
-                const row = JSON.parse(event.newValue);
-                if (row && row.payload) callback({ new: { payload: row.payload } });
-              } catch {}
-            };
-            window.addEventListener('storage', listener);
-            listeners.push(listener);
             return api;
           },
-          subscribe() { return api; },
-          unsubscribe() {
-            listeners.splice(0).forEach(fn => window.removeEventListener('storage', fn));
-            callback = null;
-            return Promise.resolve();
-          },
-        };
-        return api;
+        }),
       },
     });
-
-    window.supabase = { createClient };
     try {
       Object.defineProperty(navigator, 'clipboard', {
         configurable: true,

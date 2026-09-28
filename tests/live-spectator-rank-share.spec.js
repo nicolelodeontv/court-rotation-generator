@@ -4,29 +4,35 @@ const roster = count => Array.from({ length: count }, (_, i) => 'Player ' + (i +
 
 async function installFakeSupabase(page) {
   await page.addInitScript(() => {
-    const originalSet = window.localStorage.setItem.bind(window.localStorage);
-    const keyFor = code => '__fake_crg_live__' + code;
     Object.defineProperty(window, 'supabase', {
       configurable: true,
       value: {
         createClient: () => ({
-          from: () => ({
-            upsert: async row => {
-              originalSet(keyFor(row.session_code), JSON.stringify(row.payload));
-              return { error: null };
-            },
-            select: function () { this._select = true; return this; },
-            eq: function (_column, value) { this._code = value; return this; },
-            maybeSingle: async function () {
-              const raw = window.localStorage.getItem(keyFor(this._code));
-              return { data: raw ? { payload: JSON.parse(raw) } : null, error: null };
-            },
-          }),
-          channel: () => ({
-            on() { return this; },
-            subscribe() { return this; },
-            unsubscribe() { return Promise.resolve(); },
-          }),
+          channel: topic => {
+            const bc = new BroadcastChannel(topic);
+            const api = {
+              on(_type, config, handler) {
+                bc.addEventListener('message', event => {
+                  const data = event.data;
+                  if (data?.event === config?.event) handler({ payload: data.payload });
+                });
+                return api;
+              },
+              subscribe(callback) {
+                setTimeout(() => callback?.('SUBSCRIBED'), 0);
+                return api;
+              },
+              send(message) {
+                bc.postMessage(message);
+                return Promise.resolve('ok');
+              },
+              unsubscribe() {
+                try { bc.close(); } catch {}
+                return Promise.resolve();
+              },
+            };
+            return api;
+          },
         }),
       },
     });

@@ -190,3 +190,109 @@ body.setup-nav-hidden .bottom-nav{grid-template-columns:repeat(5,minmax(0,1fr))}
   body.setup-nav-hidden .nav-btn{padding:8px 4px;font-size:12px}
   body.setup-nav-hidden .nav-btn span{font-size:9px}
 }
+
+
+/* Release update: Up Next cards stay full-width, identical in size, and on one visual line. */
+#liveView .live-upnext-column,#liveView .live-upnext-column>.upnext,#liveView .upnext-list{width:100%;max-width:none;min-width:0}
+#liveView .upnext-list .next-item{
+  display:flex;
+  align-items:center;
+  width:100%;
+  min-width:0;
+  min-height:50px;
+  height:50px;
+  max-height:50px;
+  padding:8px 38px 8px 10px;
+  overflow:hidden;
+  border:1px solid var(--accent-border);
+  border-radius:var(--radius-md);
+  gap:8px;
+  flex-wrap:nowrap;
+}
+#liveView .upnext-list .next-item .upnext-game-no{flex:0 0 auto;white-space:nowrap;font-size:clamp(9px,2.6vw,12px);line-height:1}
+#liveView .upnext-list .next-item .upnext-matchup{
+  flex:1 1 auto;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:clamp(9px,2.85vw,12px);
+  line-height:1.2;
+  text-align:left;
+}
+#liveView .upnext-list .next-item .drag-handle{
+  right:8px;
+  width:20px!important;
+  min-width:20px!important;
+  flex:0 0 20px;
+}
+@media(min-width:1000px){
+  #liveView .live-upnext-column{justify-self:stretch;width:100%}
+  #liveView .live-upnext-column>.upnext{width:100%}
+  #liveView .upnext-list{width:100%}
+  #liveView .upnext-list .next-item{min-width:0;width:100%}
+}
+@media(max-width:360px){
+  #liveView .upnext-list .next-item{padding-left:8px;padding-right:36px;gap:6px}
+  #liveView .upnext-list .next-item .upnext-game-no{font-size:9px}
+  #liveView .upnext-list .next-item .upnext-matchup{font-size:9px}
+  #liveView .upnext-list .next-item .drag-handle{right:7px}
+}
+
+/* Release update: keep narrow phones and landscape views within the viewport. */
+html,body{max-width:100%;overflow-x:hidden}
+img,svg,video,canvas{max-width:100%;height:auto}
+main,.view,.card,.hero,.live-card,.ranking-hero,.live-main-column,.live-upnext-column,.tools-grid,.tools-right-column,.section-top,.row,.quick{min-width:0;max-width:100%}
+@media(max-width:700px){
+  .topbar{align-items:flex-start}
+  .topbar>div{min-width:0;flex:1 1 auto}
+  .topbar .bottom-nav{flex:0 0 auto}
+  .section-top{align-items:flex-start;flex-wrap:wrap}
+  .section-top>.row{flex:1 1 100%;flex-wrap:wrap;justify-content:flex-end;min-width:0}
+  .section-top>.row>button{flex:1 1 120px;min-width:0}
+  .section-top h2,.hero h2{font-size:clamp(20px,6vw,26px)}
+  .hero{min-width:0}
+  .hero-badges{max-width:100%;justify-content:flex-start}
+  .card-head{min-width:0}
+  .card-head h3{min-width:0}
+  .sheet-panel{width:min(520px,calc(100vw - 24px));max-width:100%;min-width:0}
+  .sheet-panel *{max-width:100%}
+  .match-log,.match-log-list,.timeline,.player-grid,.rankings-list{max-width:100%;min-width:0}
+  .shared-live-page{width:100%;max-width:100%;min-width:0}
+  .shared-live-page .card{min-width:0}
+  body.court-mode{width:100%;max-width:100%;overflow-x:hidden}
+}
+@media(max-width:360px){
+  :root{--gutter:12px}
+  .topbar p{font-size:12px}
+  .topbar h1{font-size:clamp(28px,8vw,34px)}
+  .bottom-nav{gap:3px!important}
+  .bottom-nav .nav-btn{padding:7px 2px;font-size:10px}
+  .bottom-nav .nav-btn span{font-size:8px}
+  .bottom-nav .nav-btn{min-width:0}
+}
+@media(max-width:700px){
+  .bottom-nav{left:max(8px,var(--gutter));right:max(8px,var(--gutter));width:auto}
+  .bottom-nav .nav-btn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+}
+
+/* Release update: compact spectator layouts are also protected from horizontal overflow. */
+@media(max-width:700px){
+  .shared-live-page{padding:clamp(10px,4vw,16px)}
+  .live-spectator-card,.live-leaderboard-page{padding:clamp(14px,4vw,22px)}
+  .live-spectator-heading{gap:12px}
+  .spectator-current{padding:clamp(12px,3.5vw,18px)}
+  .spectator-current h2{font-size:clamp(22px,7vw,34px)}
+  .spectator-schedule{gap:10px}
+}
+
+
+/* Combined release: nested Up Next player markup stays inline and truncates only the name text. */
+#upNextList .upnext-matchup{display:flex;align-items:center;min-width:0;overflow:hidden;white-space:nowrap}
+#upNextList .upnext-matchup .live-player-name{display:inline-flex!important;align-items:baseline;flex:1 1 0;min-width:0;max-width:none;overflow:hidden;white-space:nowrap!important;overflow-wrap:normal;word-break:normal}
+#upNextList .upnext-player-name-text{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#upNextList .upnext-matchup .live-player-stars{display:inline-block;flex:0 0 auto;white-space:nowrap;font-size:.72em;letter-spacing:-.04em}
+#upNextList .upnext-and,#upNextList .upnext-vs{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;white-space:nowrap}
+#upNextList .upnext-and{margin:0 .25em;color:var(--muted);font-weight:800}
+#upNextList .upnext-vs{margin:0 .4em;font-weight:900}
