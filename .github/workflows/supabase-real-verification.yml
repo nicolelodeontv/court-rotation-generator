@@ -3,9 +3,6 @@ name: Real Supabase Verification
 
 on:
   workflow_dispatch:
-  push:
-    branches: [supabase-switch-20260928]
-    paths: [.github/workflows/supabase-real-verification.yml]
 
 permissions:
   contents: read
