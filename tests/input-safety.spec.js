@@ -118,6 +118,8 @@ test('restoring an old-format saved session generates a new code, migrates immed
     window.__crgRestoreSaveStacks = [];
   }, { savedState: saved, code: oldCode });
 
+  await page.goto('/');
+
   const label = await page.locator('#sessionCodeText').textContent();
   const code = String(label || '').match(/CRG-[A-Z0-9]+/)?.[0] || '';
   expect(code).toMatch(/^CRG-[A-HJ-NP-Z2-9]{10}$/);

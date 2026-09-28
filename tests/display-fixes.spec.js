@@ -723,6 +723,7 @@ test('winner row inversion, player stars, singular games label, and setup nav vi
   expect(ranksStyles.chipBackground).toBe('rgb(42, 51, 40)');
   expect(ranksStyles.chipText).toBe('rgb(239, 234, 221)');
 
+  await page.reload();
   await expect(page.locator('.sheet.final-rankings')).toBeVisible();
   await page.locator('#completeCloseBtn').click();
   await expect(page.locator('#setupNavBtn')).toBeHidden();
