@@ -3,6 +3,7 @@ const { test, expect } = require('@playwright/test');
 const ROSTER = ['Alice', 'Bob', 'Cara', 'Dana', 'Eli'];
 
 async function generateSession(page) {
+  await page.route('**://*.supabase.co/**', route => route.abort());
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
   await page.locator('#playerPasteBtn').click();
