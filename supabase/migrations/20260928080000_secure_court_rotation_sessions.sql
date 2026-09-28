@@ -80,6 +80,7 @@ begin
     raise exception 'Payload too large.';
   end if;
 
+  -- Expired rows count toward this cap until the pg_cron cleanup is enabled.
   if not exists (select 1 from public.court_rotation_sessions where session_code = p_code)
      and (select count(*) from public.court_rotation_sessions) >= 2000 then
     raise exception 'Capacity reached.';
