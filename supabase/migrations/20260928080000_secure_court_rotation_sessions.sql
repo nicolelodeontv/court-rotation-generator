@@ -80,6 +80,11 @@ begin
     raise exception 'Payload too large.';
   end if;
 
+  if not exists (select 1 from public.court_rotation_sessions where session_code = p_code)
+     and (select count(*) from public.court_rotation_sessions) >= 2000 then
+    raise exception 'Capacity reached.';
+  end if;
+
   v_host_key_hash := encode(
     extensions.digest(p_host_key, 'sha256'),
     'hex'
