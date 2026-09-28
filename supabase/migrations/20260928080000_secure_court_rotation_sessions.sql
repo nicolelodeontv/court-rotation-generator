@@ -1,5 +1,6 @@
 -- Court Rotation Generator: secure Supabase schema for https://wochetemsnrysnjrgoed.supabase.co
 -- Review in the Supabase SQL editor before running. This file has not been executed.
+-- Required extension: pg_cron (enabled by this migration with CREATE EXTENSION IF NOT EXISTS).
 
 create table if not exists public.court_rotation_sessions (
   session_code text primary key,
