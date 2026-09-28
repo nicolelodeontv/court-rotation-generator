@@ -68,7 +68,8 @@ async function dragGame(page, sourceIndex, targetIndex, { move = true } = {}) {
   }
 
   await expect(page.locator('.upnext-dragging-card')).toHaveCount(1);
-  console.log(JSON.stringify(await page.evaluate(() => ({
+  const dragLayout = await page.evaluate(() => ({
+    pointer: { x: Math.round(window.__crgLastPointerX || 0), y: Math.round(window.__crgLastPointerY || 0) },
     list: [...document.querySelector('#upNextList').children].map(node => ({
       tag: node.tagName,
       game: node.dataset?.upcomingIndex || null,
@@ -78,7 +79,8 @@ async function dragGame(page, sourceIndex, targetIndex, { move = true } = {}) {
         return { top: Math.round(r.top), bottom: Math.round(r.bottom), left: Math.round(r.left), right: Math.round(r.right) };
       })(),
     })),
-  })));
+  }));
+  console.log(JSON.stringify(dragLayout));
   await page.mouse.up();
 
   await expect(page.locator('.upnext-dragging-card')).toHaveCount(0);
