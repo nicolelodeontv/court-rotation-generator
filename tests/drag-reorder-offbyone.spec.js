@@ -3,7 +3,11 @@ const { test, expect } = require('@playwright/test');
 const ROSTER = ['Alice', 'Bob', 'Cara', 'Dana', 'Eli'];
 
 async function generateSession(page) {
-  await page.route('**://*.supabase.co/**', route => route.abort());
+  await page.route('**/api/live-config', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ configured: false, url: '', publishableKey: '', source: 'test' }),
+  }));
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
   await page.locator('#playerPasteBtn').click();
@@ -23,7 +27,7 @@ async function scheduleMatches(page) {
   return page.locator('#scheduleList .game-row .game-match').allTextContents();
 }
 
-async function dragGame(page, sourceIndex, targetIndex) {
+async function dragGame(page, sourceIndex, targetIndex, { move = true } = {}) {
   const source = page.locator(
     '#upNextList .next-item[data-upcoming-index="' + sourceIndex + '"]'
   );
@@ -44,11 +48,13 @@ async function dragGame(page, sourceIndex, targetIndex) {
   await page.mouse.down();
 
   // Drop in the upper half so the placeholder occupies the target's original slot.
-  await page.mouse.move(
-    targetRect.x + targetRect.width / 2,
-    targetRect.y + 6,
-    { steps: 8 }
-  );
+  if (move) {
+    await page.mouse.move(
+      targetRect.x + targetRect.width / 2,
+      targetRect.y + 6,
+      { steps: 8 }
+    );
+  }
 
   await expect(page.locator('.upnext-dragging-card')).toHaveCount(1);
   await page.mouse.up();
@@ -107,7 +113,7 @@ test('dropping a game on itself leaves the order unchanged', async ({ page }) =>
   await generateSession(page);
 
   const before = await scheduleMatches(page);
-  await dragGame(page, 3 - 1, 3 - 1);
+  await dragGame(page, 3 - 1, 3 - 1, { move: false });
   const after = await scheduleMatches(page);
 
   console.log(JSON.stringify({
