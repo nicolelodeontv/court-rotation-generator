@@ -104,7 +104,27 @@ test('restoring an old-format saved session generates a new code, migrates immed
     window.__crgRestoreSaveStacks = [];
   }, { savedState: saved, code: oldCode });
 
+  const pageErrors = [];
+  const consoleErrors = [];
+  page.on('pageerror', error => pageErrors.push(String(error?.stack || error)));
+  page.on('console', message => {
+    if (message.type() === 'error') consoleErrors.push(message.text());
+  });
+
   await page.goto('/');
+
+  console.log('CRG-RESTORE-DIAG', JSON.stringify({
+    pageErrors,
+    consoleErrors,
+    storage: await page.evaluate(() => Object.fromEntries(
+      Object.keys(localStorage)
+        .filter(key => /^(crg-live-state-v1|crg-supabase-host-key-v1:)/.test(key))
+        .map(key => [key, localStorage.getItem(key)])
+    )),
+    activeView: await page.locator('.view.active').getAttribute('id').catch(() => null),
+    sessionCodeText: await page.locator('#sessionCodeText').textContent().catch(() => null),
+    setupStatus: await page.locator('#setupStatus').textContent().catch(() => null)
+  }));
 
   const label = await page.locator('#sessionCodeText').textContent();
   const code = String(label || '').match(/CRG-[A-Z0-9]+/)?.[0] || '';
