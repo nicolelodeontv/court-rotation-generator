@@ -129,7 +129,7 @@ test('Up Next keeps four visible cards on a uniform 8px outer/inter-card rhythm'
     const rects = cards.map(node => node.getBoundingClientRect());
     return {
       count: cards.length,
-      labels: cards.map(card => card.querySelector('span:first-child')?.textContent || ''),
+      labels: cards.map(card => card.querySelector('.upnext-game-no')?.textContent || ''),
       topGap: rects[0] && headerRect ? rects[0].top - headerRect.bottom : -1,
       interGaps: rects.slice(1).map((rect, i) => rect.top - rects[i].bottom),
       bottomGap: rects.at(-1) && panelRect ? panelRect.bottom - rects.at(-1).bottom : -1,
