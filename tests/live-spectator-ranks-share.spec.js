@@ -15,33 +15,68 @@ async function installFakeSupabase(page) {
     Object.defineProperty(window, 'supabase', {
       configurable: true,
       value: {
-        createClient: () => ({
-          channel: topic => {
-            const bc = new BroadcastChannel(topic);
-            const api = {
-              on(_type, config, handler) {
-                bc.addEventListener('message', event => {
-                  const data = event.data;
-                  if (data?.event === config?.event) handler({ payload: data.payload });
-                });
-                return api;
-              },
-              subscribe(callback) {
-                setTimeout(() => callback?.('SUBSCRIBED'), 0);
-                return api;
-              },
-              send(message) {
-                bc.postMessage(message);
-                return Promise.resolve('ok');
-              },
-              unsubscribe() {
-                try { bc.close(); } catch {}
-                return Promise.resolve();
-              },
-            };
-            return api;
-          },
-        }),
+        createClient: () => {
+          const storageKey = 'crg-fake-live-sessions-v1';
+          const readSessions = () => {
+            try { return JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { return {}; }
+          };
+          const writeSession = (code, payload) => {
+            const sessions = readSessions();
+            sessions[String(code)] = { payload, updatedAt: new Date().toISOString() };
+            localStorage.setItem(storageKey, JSON.stringify(sessions));
+          };
+          window.__crgSeedLivePayload = (code, payload) => writeSession(code, payload);
+          return {
+            from: () => {
+              const chain = {
+                _code: '',
+                select() { return chain; },
+                eq(_field, code) { chain._code = String(code); return chain; },
+                async maybeSingle() {
+                  const row = readSessions()[chain._code];
+                  return row
+                    ? { data: { payload: row.payload, updated_at: row.updatedAt }, error: null }
+                    : { data: null, error: null };
+                },
+                async upsert(row) {
+                  writeSession(row.session_code, row.payload);
+                  return { data: null, error: null };
+                },
+              };
+              return chain;
+            },
+            async rpc(name, args) {
+              if (name !== 'publish_session') return { data: null, error: { message: 'Unsupported RPC' } };
+              writeSession(args?.p_code, args?.p_payload);
+              return { data: true, error: null };
+            },
+            channel: topic => {
+              const bc = new BroadcastChannel(topic);
+              const api = {
+                on(_type, config, handler) {
+                  bc.addEventListener('message', event => {
+                    const data = event.data;
+                    if (data?.event === config?.event) handler({ payload: data.payload });
+                  });
+                  return api;
+                },
+                subscribe(callback) {
+                  setTimeout(() => callback?.('SUBSCRIBED'), 0);
+                  return api;
+                },
+                send(message) {
+                  bc.postMessage(message);
+                  return Promise.resolve('ok');
+                },
+                unsubscribe() {
+                  try { bc.close(); } catch {}
+                  return Promise.resolve();
+                },
+              };
+              return api;
+            },
+          };
+        },
       },
     });
     try {
