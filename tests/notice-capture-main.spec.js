@@ -53,32 +53,37 @@ test('Capture live-sync failure notices and snapshot fallback', async ({ page })
   console.log('BEFORE', JSON.stringify(await inspect(page)));
 
   await page.evaluate(() => {
+    let toast = document.querySelector('#crgToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'crgToast';
+      document.body.appendChild(toast);
+    }
     window.__crgNoticeHistory = [];
     window.__crgLastNotice = '';
-    window.__crgNoticeSampler = setInterval(() => {
-      const candidates = [
-        ['#crgToast', document.querySelector('#crgToast')],
-        ['#setupStatus', document.querySelector('#setupStatus')],
-        ['#nextGameStatus', document.querySelector('#nextGameStatus')],
-        ['[role="status"]', document.querySelector('[role="status"]')],
-      ];
-      const visible = candidates
-        .filter(([, node]) => node && node.offsetParent !== null)
-        .map(([selector, node]) => ({ selector, text: node.textContent.trim() }))
-        .filter(x => x.text);
-      const snapshot = visible.map(x => x.selector + '|' + x.text).join('||');
-      if (snapshot && snapshot !== window.__crgLastNotice) {
-        const toast = visible.find(x => x.selector === '#crgToast');
-        if (toast) {
-          window.__crgNoticeHistory.push({
-            at: performance.now(),
-            selector: toast.selector,
-            text: toast.text,
-          });
+    const record = text => {
+      const value = String(text || '').trim();
+      if (!value || value === window.__crgLastNotice) return;
+      window.__crgNoticeHistory.push({ at: performance.now(), selector: '#crgToast', text: value });
+      window.__crgLastNotice = value;
+    };
+    window.__crgNoticeObserver = new MutationObserver(records => {
+      for (const mutation of records) {
+        if (mutation.target?.id === 'crgToast' || mutation.target?.closest?.('#crgToast')) {
+          if (mutation.type === 'childList') {
+            for (const node of mutation.addedNodes || []) record(node.textContent);
+          }
+          const current = document.querySelector('#crgToast');
+          if (current?.classList.contains('show')) record(current.textContent);
         }
-        window.__crgLastNotice = snapshot;
       }
-    }, 5);
+    });
+    window.__crgNoticeObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class'],
+    });
   });
 
   await page.locator('#copyLiveSpectatorBtn').click();
@@ -87,7 +92,7 @@ test('Capture live-sync failure notices and snapshot fallback', async ({ page })
   await page.waitForTimeout(900);
 
   const result = await page.evaluate(() => {
-    clearInterval(window.__crgNoticeSampler);
+    window.__crgNoticeObserver?.disconnect();
     return {
       notices: window.__crgNoticeHistory,
       after: {
