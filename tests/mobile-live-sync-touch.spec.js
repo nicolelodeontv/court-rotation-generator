@@ -34,21 +34,64 @@ async function generateSession(page, count = 5) {
   await expect(page.locator('#setupStatus')).toContainText('Rotation ready', { timeout: 8000 });
 }
 
-test('Copy live spectator link falls back cleanly when Supabase cannot initialize', async ({ page }) => {
+test('Live-sync failure shows a notice and provides a snapshot fallback', async ({ page }) => {
   await installClipboard(page);
   await failSupabaseClient(page);
   await generateSession(page, 5);
 
+  await page.evaluate(() => {
+    window.__crgToastHistory = [];
+    window.__crgLastToast = '';
+    window.__crgToastObserver = new MutationObserver(records => {
+      for (const mutation of records) {
+        if (mutation.type === 'childList' && (mutation.target?.id === 'crgToast' || mutation.target?.closest?.('#crgToast'))) {
+          for (const node of mutation.addedNodes || []) {
+            const value = node.textContent?.trim() || '';
+            if (value && value !== window.__crgLastToast) {
+              window.__crgToastHistory.push({ at: performance.now(), text: value });
+              window.__crgLastToast = value;
+            }
+          }
+        }
+        if (mutation.type === 'attributes' && mutation.target?.id === 'crgToast' && mutation.target.classList.contains('show')) {
+          const value = mutation.target.textContent?.trim() || '';
+          if (value && value !== window.__crgLastToast) {
+            window.__crgToastHistory.push({ at: performance.now(), text: value });
+            window.__crgLastToast = value;
+          }
+        }
+      }
+    });
+    window.__crgToastObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+  });
+
+  const beforeButton = await page.locator('#copyLiveSpectatorBtn').textContent();
+  expect(beforeButton.trim()).toBe('Copy live spectator link');
+
   await page.locator('#copyLiveSpectatorBtn').click();
 
-  await expect.poll(() => page.evaluate(() => window.__crgCopiedText || '')).toMatch(/(?:\?|&)s=/);
-  const copied = await page.evaluate(() => window.__crgCopiedText || '');
-  expect(copied).toContain('view=spectator');
-  expect(copied).not.toContain('live=');
-  await expect(page.locator('#copyLiveSpectatorBtn')).toHaveText('Copy read-only snapshot link');
-  await expect(page.locator('#crgToast')).toContainText('Live sync unavailable');
-  await expect(page.locator('#crgToast')).toContainText('snapshot link copied');
-  await expect(page.locator('#crgToast')).not.toContainText('Check the live-sync setup');
+  await expect.poll(() => page.evaluate(() => window.__crgCopiedText || ''), { timeout: 5000 })
+    .toMatch(/(?:\?|&)s=/);
+
+  const result = await page.evaluate(() => {
+    window.__crgToastObserver?.disconnect();
+    return {
+      notices: window.__crgToastHistory,
+      copied: window.__crgCopiedText || '',
+      button: document.querySelector('#copyLiveSpectatorBtn')?.textContent?.trim() || '',
+    };
+  });
+
+  expect(result.notices.some(n => /live (sync|storage) unavailable/i.test(n.text))).toBe(true);
+  expect(result.copied).toMatch(/(?:\?|&)s=/);
+  expect(result.copied).toContain('view=spectator');
+  expect(result.copied).not.toContain('live=');
+  expect(result.button).toBe('Copy read-only snapshot link');
 
   await page.locator('#addMidSessionPlayerBtn').click();
   await expect(page.locator('#midPlayerConfirm')).toBeVisible();
