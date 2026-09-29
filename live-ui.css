@@ -210,3 +210,10 @@ html,body{max-width:100%;overflow-x:hidden}.crg-team-matchup,.crg-team-side,.crg
 @media(max-width:1100px){#liveView .live-grid{grid-template-columns:minmax(0,1fr)!important}}
 @media(max-width:700px){#liveView .live-grid{display:block!important}#liveView .upnext-list{grid-template-columns:1fr!important}.schedule-matchup .crg-team-side{min-height:122px}.match-log-matchup{grid-template-columns:1fr!important;gap:6px!important}.match-log-team.crg-team-block{min-height:106px}.spectator-matchup{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)!important;gap:6px!important}.spectator-team.crg-team-side{padding:9px 5px!important}.spectator-game .crg-team-player-name,.spectator-current .crg-team-player-name{font-size:clamp(18px,6vw,25px)!important}.spectator-game .crg-team-player-stars,.spectator-current .crg-team-player-stars{font-size:.54em!important}.spectator-upnext-matchup .crg-team-player-name,.spectator-log-matchup .crg-team-player-name{font-size:clamp(15px,4.7vw,19px)!important}}
 @media(max-width:360px){#liveView .upnext-list{grid-auto-rows:174px!important}#liveView .upnext-list .next-item{height:174px!important;min-height:174px!important;max-height:174px!important}.spectator-team.crg-team-side{min-height:116px!important}.spectator-game .crg-team-player-name,.spectator-current .crg-team-player-name{font-size:18px!important}.spectator-upnext-matchup .crg-team-player-name,.spectator-log-matchup .crg-team-player-name{font-size:15px!important}}
+@media(max-width:700px){
+  body:not(.court-mode) #liveView .live-card>.quick{
+    position:sticky;
+    bottom:calc(var(--bottom-nav-clearance) + env(safe-area-inset-bottom));
+    z-index:20;
+  }
+}
