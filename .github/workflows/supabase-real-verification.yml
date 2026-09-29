@@ -1,0 +1,55 @@
+# Manual/branch-triggered verification; keep temporary until the real verification is complete (temporary push trigger; verification follow-up; check-10 assertion update).
+name: Real Supabase Verification
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CRG_RUN_SUPABASE_REAL: '1'
+      CRG_SUPABASE_URL: ${{ secrets.CRG_SUPABASE_URL }}
+      CRG_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.CRG_SUPABASE_PUBLISHABLE_KEY }}
+    steps:
+      - name: Check out verification branch
+        uses: actions/checkout@v4
+        with:
+          ref: supabase-switch-20260928
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Mask verification secrets
+        shell: bash
+        run: |
+          echo '::add-mask::${CRG_SUPABASE_URL}'
+          echo '::add-mask::${CRG_SUPABASE_PUBLISHABLE_KEY}'
+
+      - name: Verify required secrets are present
+        shell: bash
+        run: |
+          test -n "${CRG_SUPABASE_URL}" || { echo 'CRG_SUPABASE_URL is not set.'; exit 1; }
+          test -n "${CRG_SUPABASE_PUBLISHABLE_KEY}" || { echo 'CRG_SUPABASE_PUBLISHABLE_KEY is not set.'; exit 1; }
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            echo 'package-lock.json is absent on this branch; using npm install.'
+            npm install
+          fi
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run real Supabase verification
+        run: npx playwright test tests/supabase-rest-verification.spec.js --reporter=list
