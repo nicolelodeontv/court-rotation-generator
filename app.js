@@ -75,6 +75,21 @@ if(multiCourt){
   e.next.hidden=true;e.next.disabled=true;
   const courts=sessionCourts(),currentGames=activeGames(),activeSet=new Set(currentGames),renderer=window.CRG_TEAM_RENDERER;
   const teamData=team=>team.map(id=>({name:nm(id),skill:liveSkill(id)}));
+  const primary=primaryActiveGameIndex();
+  if(primary<state.games.length){
+    const primaryGame=state.games[primary],primaryWaiting=state.waitingCourts?.[Number(primaryGame.court||1)]?.gameIndex===primary&&!gameHasStarted(primary);
+    e.currentNo.textContent=`GAME ${primary+1}`;
+    e.currentCourt.textContent=`COURT ${primaryGame.court||1}`;
+    e.currentTeams.innerHTML=renderer.renderMatchup([teamData(primaryGame.teams[0]),teamData(primaryGame.teams[1])]);
+    e.currentSit.textContent=`Sitting out: ${(primaryGame.sitting||[]).length?(primaryGame.sitting||[]).map(nm).map(esc).join(', '):'None'}`;
+    e.liveStatus.textContent=primaryWaiting?'WAITING':'NEXT UP';
+  }else{
+    e.currentNo.textContent='✓ SESSION COMPLETE';
+    e.currentCourt.textContent='COURT —';
+    e.currentTeams.innerHTML='<div class="team">All games</div><div class="versus">DONE</div><div class="team">Great session</div>';
+    e.currentSit.textContent='All scheduled games are complete.';
+    e.liveStatus.textContent='READY';
+  }
   const courtsModel=courts.map(court=>{
     const index=currentGameForCourt(court);
     if(index<0)return{court,index:-1,gameNo:null,teams:[],sitting:[],status:'complete',waitingFor:null,timerIndex:null};
