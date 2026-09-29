@@ -5,7 +5,10 @@ const roster = count => Array.from({ length: count }, (_, i) => `Player ${i + 1}
 async function generateSession(page, playerCount) {
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
-  await page.locator('#names').fill(roster(playerCount));
+  await page.locator('#playerPasteBtn').click();
+  await page.locator('#pastePlayerNames').fill(roster(playerCount));
+  await page.locator('#playerConfirm').click();
+  await expect(page.locator('#playerList .player-row')).toHaveCount(playerCount, { timeout: 2000 });
   await page.locator('#generateBtn').click();
   await expect(page.locator('#currentNo')).toHaveText('GAME 1', { timeout: 5000 });
 }
