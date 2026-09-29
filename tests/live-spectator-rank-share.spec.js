@@ -188,8 +188,8 @@ test('Live spectator link shows canonical current game, timer, stars, and update
   expect(await spectator.locator('.spectator-current .eyebrow').first().textContent()).toContain(hostCurrent.court);
   const sharedNames = (await spectator.locator('.spectator-current .spectator-player-name').allTextContents()).map(v => v.replace(/\s+⭐+.*$/, '').trim());
   expect(sharedNames).toEqual(hostCurrent.teams);
-  expect(await spectator.locator('.spectator-current .spectator-player small').count()).toBe(4);
-  expect((await spectator.locator('.spectator-current .spectator-player small').allTextContents()).every(v => /⭐/.test(v))).toBeTruthy();
+  expect(await spectator.locator('.spectator-current .crg-team-player small').count()).toBe(4);
+  expect((await spectator.locator('.spectator-current .crg-team-player small').allTextContents()).every(v => /⭐/.test(v))).toBeTruthy();
   await expect(spectator.locator('#spectatorLiveTimer')).toBeVisible();
   await expect(spectator.locator('.spectator-progress-label')).toContainText('0 / 12 games');
   await expect(spectator.locator('.live-pill').first()).toContainText('LIVE');

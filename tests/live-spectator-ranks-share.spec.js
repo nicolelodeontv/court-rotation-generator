@@ -185,7 +185,7 @@ test('Live spectator link shows current game details and updates after a complet
   const sharedNames=await spectator.locator('.spectator-current .spectator-player-name').evaluateAll(nodes=>nodes.map(node=>(node.childNodes[0]?.textContent||node.textContent||'').replace(/\s+$/,'').trim()));
   expect(sharedNames).toEqual(hostNames);
 
-  const stars = await spectator.locator('.spectator-current .spectator-player small').allTextContents();
+  const stars = await spectator.locator('.spectator-current .crg-team-player small').allTextContents();
   expect(stars).toHaveLength(4);
   expect(stars.every(value => /^⭐{1,6}$/.test(value))).toBeTruthy();
   await expect(spectator.locator('#spectatorLiveTimer')).toBeVisible();
