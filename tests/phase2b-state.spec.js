@@ -16,8 +16,12 @@ async function readState(page) {
   return page.evaluate(() => JSON.parse(localStorage.getItem('crg-live-state-v1')));
 }
 
-async function recordCurrentResult(page) {
-  await page.locator('#completeBtn').click();
+async function recordCurrentResult(page, court = 1) {
+  const multiCourt = await page.locator('#courtCards:not([hidden])').count();
+  const complete = multiCourt
+    ? page.locator(`[data-court-card="${court}"] [data-action="complete"]`)
+    : page.locator('#completeBtn');
+  await complete.click();
   await page.locator('[data-winner="0"]').click();
   await page.locator('#scoreA').fill('11');
   await page.locator('#scoreB').fill('7');
@@ -89,8 +93,8 @@ test('a court waits on a player in an active game, then starts after that game c
   expect(waiting.waitingCourts['1'].player).toBe(waiting.games[1].teams.flat()[0]);
   expect(waiting.gameStartedAtByIndex['2']).toBeUndefined();
   expect(await page.locator('#currentNo').textContent()).toBe('GAME 2');
-  expect(Number(await page.locator('#currentNo').textContent().then(text => text.replace('GAME ', '')) - 1)).not.toBe(waiting.waitingCourts['1'].gameIndex);
-  await recordCurrentResult(page);
+  expect(await page.locator('[data-court-card="2"] [data-action="complete"]').isEnabled()).toBeTruthy();
+  await recordCurrentResult(page, 2);
   const started = await readState(page);
   expect(started.done).toContain(1);
   expect(Number.isFinite(Number(started.gameStartedAtByIndex['2']))).toBeTruthy();
