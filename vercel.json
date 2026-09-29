@@ -20,5 +20,10 @@
         {"key":"Expires","value":"0"}
       ]
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "feature/phase2b-*": false
+    }
+  }
 }
