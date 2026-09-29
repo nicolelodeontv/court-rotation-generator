@@ -121,7 +121,7 @@ test('reload while one result timer is paused preserves other court start timest
   const before = await readState(page);
   const court1StartedBefore = Number(before.gameStartedAtByIndex['0']);
   const court2Started = Number(before.gameStartedAtByIndex['1']);
-  await recordCurrentResult(page);
+  await page.locator('[data-court-card="1"] [data-action="complete"]').click();
   const paused = await readState(page);
   expect(paused.v).toBe(2);
   expect(paused.gameTimerPaused).toBe(true);
