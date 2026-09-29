@@ -126,7 +126,7 @@ test('Up Next outer spacing is uniform and the panel hugs four cards', async ({ 
     const cardRects = cards.map(rect);
     return {
       count: cards.length,
-      labels: cards.map(card => card.querySelector('span:first-child')?.textContent || ''),
+      labels: cards.map(card => card.querySelector('.upnext-game-no')?.textContent || ''),
       firstGap: cardRects[0] && headRect ? cardRects[0].top - headRect.bottom : -1,
       interGap: cardRects[2] && cardRects[1] ? cardRects[2].top - cardRects[1].bottom : -1,
       bottomGap: panelRect && cardRects.at(-1) ? panelRect.bottom - cardRects.at(-1).bottom : -1,
