@@ -1,9 +1,10 @@
 const { test, expect } = require('@playwright/test');
 const roster = count => Array.from({ length: count }, (_, i) => 'Player ' + (i + 1)).join('\n');
 
-async function generateSession(page, playerCount = 8) {
+async function generateSession(page, playerCount = 8, courts = 2) {
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
+  await page.locator('#courts').fill(String(courts));
   await page.locator('#playerPasteBtn').click();
   await page.locator('#pastePlayerNames').fill(roster(playerCount));
   await page.locator('#playerConfirm').click();
