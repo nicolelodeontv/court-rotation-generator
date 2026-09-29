@@ -24,6 +24,7 @@ self.addEventListener('fetch', event => {
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
   const isNavigation = req.mode === 'navigate';
   const isStaticAsset = STATIC_EXTENSIONS.test(url.pathname);
 
