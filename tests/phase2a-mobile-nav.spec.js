@@ -3,7 +3,9 @@ const { test, expect } = require('@playwright/test');
 const roster = count => Array.from({ length: count }, (_, i) => `Player ${i + 1}`).join('\n');
 
 async function generateSession(page, playerCount) {
-  await page.locator('#names').fill(roster(playerCount));
+  await page.locator('#playerPasteBtn').click();
+  await page.locator('#pastePlayerNames').fill(roster(playerCount));
+  await page.locator('#playerConfirm').click();
   await page.locator('#generateBtn').click();
   await expect(page.locator('#currentNo')).toHaveText('GAME 1', { timeout: 5000 });
 }
