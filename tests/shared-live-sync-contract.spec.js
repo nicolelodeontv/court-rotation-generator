@@ -1,3 +1,4 @@
+// CI rerun marker for comparison.
 const { test, expect } = require('@playwright/test');
 
 const roster = count => Array.from({ length: count }, (_, i) => 'Player ' + (i + 1)).join('\n');
