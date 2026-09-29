@@ -12,6 +12,9 @@ async function gotoMobile(page, width, height = 800) {
   await page.setViewportSize({ width, height });
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForLoadState('domcontentloaded');
 }
 
 test('Mobile bottom nav is fixed with expected floating-pill geometry', async ({ page }) => {
