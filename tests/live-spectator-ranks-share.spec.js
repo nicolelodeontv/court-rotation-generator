@@ -12,6 +12,19 @@ test('live-sync script parses as valid browser JavaScript', () => {
 
 async function installFakeSupabase(page) {
   await page.addInitScript(() => {
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      if (String(url).includes('/api/live-config')) {
+        return Promise.resolve(new Response(JSON.stringify({
+          configured: true,
+          url: 'https://fake.supabase.test',
+          publishableKey: 'fake-key',
+          source: 'test-fixture',
+        }), { status: 200, headers: { 'content-type': 'application/json' } }));
+      }
+      return originalFetch(input, init);
+    };
     Object.defineProperty(window, 'supabase', {
       configurable: true,
       value: {
