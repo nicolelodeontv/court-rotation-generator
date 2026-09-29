@@ -59,9 +59,14 @@ test('court 1 completion starts its next game while court 2 timer keeps its orig
   await recordCurrentResult(page);
   await expect.poll(async () => (await readState(page)).gameStartedAtByIndex['2']).not.toBeUndefined();
   const after = await readState(page);
-  expect(Number(after.gameStartedAtByIndex['1'])).toBe(court2Started);
-  expect(Date.now() - court2Started).toBeGreaterThanOrEqual(1500);
-  expect(Date.now() - court2Started).toBeLessThan(6000);
+  const court2StartedAfter = Number(after.gameStartedAtByIndex['1']);
+  expect(court2StartedAfter).toBe(court2Started);
+  const elapsedBeforeLaterRead = Date.now() - court2StartedAfter;
+  await page.waitForTimeout(1100);
+  const later = await readState(page);
+  const court2StartedLater = Number(later.gameStartedAtByIndex['1']);
+  expect(court2StartedLater).toBe(court2StartedAfter);
+  expect(Date.now() - court2StartedLater).toBeGreaterThan(elapsedBeforeLaterRead);
 });
 
 test('a court waits on a player in an active game, then starts after that game completes', async ({ page }) => {
@@ -83,6 +88,8 @@ test('a court waits on a player in an active game, then starts after that game c
   expect(waiting.waitingCourts['1']).toMatchObject({ gameIndex: 2, blockingCourt: 2 });
   expect(waiting.waitingCourts['1'].player).toBe(waiting.games[1].teams.flat()[0]);
   expect(waiting.gameStartedAtByIndex['2']).toBeUndefined();
+  expect(await page.locator('#currentNo').textContent()).toBe('GAME 2');
+  expect(Number(await page.locator('#currentNo').textContent().then(text => text.replace('GAME ', '')) - 1)).not.toBe(waiting.waitingCourts['1'].gameIndex);
   await recordCurrentResult(page);
   const started = await readState(page);
   expect(started.done).toContain(1);
