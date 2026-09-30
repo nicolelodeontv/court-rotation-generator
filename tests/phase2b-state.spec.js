@@ -150,3 +150,43 @@ test('single-court sessions keep the old single-current-card behavior', async ({
   expect(after.done).toContain(0);
   expect(Object.keys(after.gameStartedAtByIndex)).toEqual(['1']);
 });
+
+
+test('rebuild protects a waiting current court slot and preserves its matchup', async ({ page }) => {
+  await generateSession(page, 8);
+  await page.evaluate(() => {
+    const key = 'crg-live-state-v1';
+    const data = JSON.parse(localStorage.getItem(key));
+    const activePlayers = data.games[1].teams.flat();
+    const overlapPlayer = activePlayers[0];
+    const others = data.names.map((_, i) => i + 1).filter(id => !activePlayers.includes(id)).slice(0, 3);
+    data.games[2].teams = [[overlapPlayer, others[0]], [others[1], others[2]]];
+    data.games[2].sitting = data.names.map((_, i) => i + 1).filter(id => !data.games[2].teams.flat().includes(id));
+    localStorage.setItem(key, JSON.stringify(data));
+  });
+  await page.reload();
+  await recordCurrentResult(page, 1);
+
+  const before = await readState(page);
+  const waitingIndex = 2;
+  const originalTeams = before.games[waitingIndex].teams;
+  const originalSitting = before.games[waitingIndex].sitting;
+  expect(before.waitingCourts['1']).toMatchObject({ gameIndex: waitingIndex, blockingCourt: 2 });
+
+  await page.locator('[data-view="playersView"]').click();
+  await page.locator('#rebuildBtn').click();
+  await expect(page.locator('#setupStatus')).toContainText('Remaining rotation rebuilt', { timeout: 5000 });
+
+  const rebuilt = await readState(page);
+  expect(rebuilt.games[waitingIndex].teams).toEqual(originalTeams);
+  expect(rebuilt.games[waitingIndex].sitting).toEqual(originalSitting);
+  expect(rebuilt.gameStartedAtByIndex[String(waitingIndex)]).toBeUndefined();
+  expect(rebuilt.waitingCourts['1']).toMatchObject({ gameIndex: waitingIndex, blockingCourt: 2 });
+  expect(rebuilt.waitingCourts['1'].player).toBe(before.waitingCourts['1'].player);
+
+  await recordCurrentResult(page, 2);
+  const started = await readState(page);
+  expect(Number.isFinite(Number(started.gameStartedAtByIndex[String(waitingIndex)]))).toBeTruthy();
+  expect(Number(started.gameStartedAtByIndex[String(waitingIndex)])).toBeGreaterThan(0);
+  expect(started.waitingCourts['1']).toBeUndefined();
+});
