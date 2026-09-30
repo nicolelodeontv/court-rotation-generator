@@ -64,6 +64,104 @@ test('one court keeps the existing single card and has no multi-court container'
   await expect(page.locator('#nextBtn')).toBeVisible();
 });
 
+
+test('multi-court sitting-out shows only players absent from all currently playing courts', async ({ page }) => {
+  await generateSession(page, 8, 2, 390);
+  const state = await readState(page);
+  const activePlayers = new Set();
+  for (const game of state.games.filter((g, i) => !state.done.includes(i) && Number.isFinite(Number(state.gameStartedAtByIndex[String(i)])))) {
+    for (const player of game.teams.flat()) activePlayers.add(player);
+  }
+  expect(activePlayers.size).toBe(8);
+  for (const court of [1, 2]) {
+    await expect(page.locator(`[data-court-card="${court}"] .court-card-sit`)).toHaveText('Sitting out: None');
+  }
+});
+
+test('10-player two-court display lists exactly the players not on either active court', async ({ page }) => {
+  await generateSession(page, 10, 2, 390);
+  const expected = await page.evaluate(() => {
+    const data = JSON.parse(localStorage.getItem('crg-live-state-v1'));
+    const playing = new Set();
+    data.games.forEach((game, i) => {
+      if (!data.done.includes(i) && Number.isFinite(Number(data.gameStartedAtByIndex[String(i)]))) {
+        game.teams.flat().forEach(id => playing.add(id));
+      }
+    });
+    return data.names.map((name, i) => ({ id: i + 1, name })).filter(player => !playing.has(player.id)).map(player => player.name);
+  });
+  expect(expected).toHaveLength(2);
+  for (const court of [1, 2]) {
+    await expect(page.locator(`[data-court-card="${court}"] .court-card-sit`))
+      .toHaveText(expected.length ? `Sitting out: ${expected.join(', ')}` : 'Sitting out: None');
+  }
+});
+
+test('waiting court lists only idle players and excludes the blocking player who is still playing', async ({ page }) => {
+  await generateSession(page, 8, 2, 390);
+  await page.evaluate(() => {
+    const key = 'crg-live-state-v1';
+    const data = JSON.parse(localStorage.getItem(key));
+    const activePlayers = data.games[1].teams.flat();
+    const overlapPlayer = activePlayers[0];
+    const idlePlayers = data.names.map((_, i) => i + 1).filter(id => !activePlayers.includes(id)).slice(0, 3);
+    data.games[2].teams = [[overlapPlayer, idlePlayers[0]], [idlePlayers[1], idlePlayers[2]]];
+    data.games[2].sitting = data.names.map((_, i) => i + 1).filter(id => !data.games[2].teams.flat().includes(id));
+    localStorage.setItem(key, JSON.stringify(data));
+  });
+  await page.reload();
+  await recordCourtResult(page, 1);
+
+  const waiting = await readState(page);
+  const blockerId = Number(waiting.waitingCourts['1'].player);
+  const blockerName = waiting.names[blockerId - 1];
+  const idleNames = waiting.names.map((name, i) => ({ id: i + 1, name }))
+    .filter(player => player.id !== blockerId && !waiting.games[1].teams.flat().includes(player.id))
+    .map(player => player.name);
+
+  await expect(page.locator('[data-court-card="1"] .court-card-status')).toHaveText('WAITING');
+  await expect(page.locator('[data-court-card="1"] .court-card-sit')).toHaveText(`Sitting out: ${idleNames.join(', ')}`);
+  await expect(page.locator('[data-court-card="1"] .court-card-sit')).not.toContainText(blockerName);
+});
+
+test('players marked unavailable remain listed as sitting out when they are not on a playing court', async ({ page }) => {
+  await generateSession(page, 10, 2, 390);
+  const state = await readState(page);
+  const playing = new Set();
+  state.games.forEach((game, i) => {
+    if (!state.done.includes(i) && Number.isFinite(Number(state.gameStartedAtByIndex[String(i)]))) {
+      game.teams.flat().forEach(id => playing.add(id));
+    }
+  });
+  const restingId = state.names.map((_, i) => i + 1).find(id => !playing.has(id));
+  expect(restingId).toBeTruthy();
+
+  await page.evaluate(id => {
+    const key = 'crg-live-state-v1';
+    const data = JSON.parse(localStorage.getItem(key));
+    data.active = data.active.filter(playerId => playerId !== id);
+    localStorage.setItem(key, JSON.stringify(data));
+  }, restingId);
+  await page.reload();
+
+  const restingName = (await readState(page)).names[restingId - 1];
+  await expect(page.locator('.court-card-sit').first()).toContainText(restingName);
+});
+
+test('single-court sitting-out display remains sourced from the existing game sitting list', async ({ page }) => {
+  await generateSession(page, 5, 1, 390);
+  await page.evaluate(() => {
+    const key = 'crg-live-state-v1';
+    const data = JSON.parse(localStorage.getItem(key));
+    data.games[0].sitting = [5];
+    localStorage.setItem(key, JSON.stringify(data));
+  });
+  await page.reload();
+
+  await expect(page.locator('#currentSit')).toHaveText('Sitting out: Player 5');
+  await expect(page.locator('#courtCards')).toBeHidden();
+});
+
 test('collapse and expand keeps the court timer running while collapsed', async ({ page }) => {
   await generateSession(page, 8, 2, 390);
   const card = page.locator('[data-court-card="1"]');
