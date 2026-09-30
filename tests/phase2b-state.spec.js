@@ -184,6 +184,7 @@ test('rebuild protects a waiting current court slot and preserves its matchup', 
   expect(rebuilt.waitingCourts['1']).toMatchObject({ gameIndex: waitingIndex, blockingCourt: 2 });
   expect(rebuilt.waitingCourts['1'].player).toBe(before.waitingCourts['1'].player);
 
+  await page.locator('[data-view="liveView"]').click();
   await recordCurrentResult(page, 2);
   const started = await readState(page);
   expect(Number.isFinite(Number(started.gameStartedAtByIndex[String(waitingIndex)]))).toBeTruthy();
