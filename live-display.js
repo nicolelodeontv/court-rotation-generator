@@ -13,7 +13,8 @@ function render(model){
   const renderer=window.CRG_TEAM_RENDERER;
   root.innerHTML=(model.courts||[]).map(court=>{
     const courtNumber=Number(court.court||1),collapsed=collapsedCourts.has(courtNumber),playing=court.status==='playing',waiting=court.status==='waiting';
-    const timer=court.timerIndex===null||court.timerIndex===undefined?'00:00':'00:00';
+    const formatElapsed=totalSeconds=>{const total=Math.max(0,Math.floor(Number(totalSeconds)||0)),mm=Math.floor(total/60).toString().padStart(2,'0'),ss=(total%60).toString().padStart(2,'0');return mm+':'+ss};
+    const timer=formatElapsed(court.timerSeconds);
     const teams=renderer?.renderMatchup?renderer.renderMatchup(court.teams||[]):'<div class="team">—</div><div class="versus">VS</div><div class="team">—</div>';
     const waitingMarkup=waiting&&court.waitingFor?'<div class="court-card-waiting"><b>WAITING FOR PLAYERS</b><span>Waiting for '+esc(court.waitingFor.player)+' (Court '+Number(court.waitingFor.court||1)+')</span></div>':'';
     return '<article class="court-card '+(collapsed?'is-collapsed':'')+'" data-court-card="'+courtNumber+'" role="listitem">'+
