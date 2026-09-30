@@ -17,7 +17,7 @@ async function readState(page) {
 }
 
 async function recordCurrentResult(page, court = 1) {
-  const multiCourt = await page.locator('#courtCards:not([hidden])').count();
+  const multiCourt = await page.locator('#courtCards:not([hidden])').isVisible();
   const complete = multiCourt
     ? page.locator(`[data-court-card="${court}"] [data-action="complete"]`)
     : page.locator('#completeBtn');
