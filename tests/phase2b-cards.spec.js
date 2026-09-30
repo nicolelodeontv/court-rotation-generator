@@ -64,6 +64,20 @@ test('one court keeps the existing single card and has no multi-court container'
   await expect(page.locator('#nextBtn')).toBeVisible();
 });
 
+
+test('multi-court sitting-out shows only players absent from all currently playing courts', async ({ page }) => {
+  await generateSession(page, 8, 2, 390);
+  const state = await readState(page);
+  const activePlayers = new Set();
+  for (const game of state.games.filter((g, i) => !state.done.includes(i) && Number.isFinite(Number(state.gameStartedAtByIndex[String(i)])))) {
+    for (const player of game.teams.flat()) activePlayers.add(player);
+  }
+  expect(activePlayers.size).toBe(8);
+  for (const court of [1, 2]) {
+    await expect(page.locator(`[data-court-card="${court}"] .court-card-sit`)).toHaveText('Sitting out: None');
+  }
+});
+
 test('collapse and expand keeps the court timer running while collapsed', async ({ page }) => {
   await generateSession(page, 8, 2, 390);
   const card = page.locator('[data-court-card="1"]');
