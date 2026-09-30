@@ -144,7 +144,7 @@ test('players marked unavailable remain listed as sitting out when they are not 
   }, restingId);
   await page.reload();
 
-  const restingName = (await readState()).names[restingId - 1];
+  const restingName = (await readState(page)).names[restingId - 1];
   await expect(page.locator('.court-card-sit').first()).toContainText(restingName);
 });
 
