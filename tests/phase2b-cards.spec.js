@@ -169,3 +169,36 @@ test('Court Mode shows multi-court cards inside the existing full-height Live sh
   expect(metrics.documentWidth).toBeLessThanOrEqual(metrics.width);
   expect(metrics.bodyWidth).toBeLessThanOrEqual(metrics.width);
 });
+
+
+test('restored multi-court cards paint actual elapsed timers on first render', async ({ page }) => {
+  await generateSession(page, 8, 2, 390);
+  await page.evaluate(() => {
+    const key = 'crg-live-state-v1';
+    const data = JSON.parse(localStorage.getItem(key));
+    const now = Date.now();
+    data.gameStartedAtByIndex['0'] = now - 65000;
+    data.gameStartedAtByIndex['1'] = now - 125000;
+    localStorage.setItem(key, JSON.stringify(data));
+  });
+
+  await page.reload();
+  await expect(page.locator('#courtCards')).toBeVisible({ timeout: 5000 });
+  const readings = await page.evaluate(() => {
+    const state = JSON.parse(localStorage.getItem('crg-live-state-v1'));
+    const format = total => {
+      const seconds = Math.max(0, Math.floor(Number(total) || 0));
+      return Math.floor(seconds / 60).toString().padStart(2, '0') + ':' + (seconds % 60).toString().padStart(2, '0');
+    };
+    return ['0', '1'].map(index => {
+      const started = Number(state.gameStartedAtByIndex[index]);
+      const expected = format((Date.now() - started) / 1000);
+      const node = document.querySelector('[data-timer-index="' + index + '"]');
+      return { index, expected, actual: node?.textContent ?? '' };
+    });
+  });
+
+  for (const reading of readings) {
+    expect(reading.actual).toBe(reading.expected);
+  }
+});
