@@ -12,36 +12,84 @@ test('live-sync script parses as valid browser JavaScript', () => {
 
 async function installFakeSupabase(page) {
   await page.addInitScript(() => {
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      if (String(url).includes('/api/live-config')) {
+        return Promise.resolve(new Response(JSON.stringify({
+          configured: true,
+          url: 'https://fake.supabase.test',
+          publishableKey: 'fake-key',
+          source: 'test-fixture',
+        }), { status: 200, headers: { 'content-type': 'application/json' } }));
+      }
+      return originalFetch(input, init);
+    };
     Object.defineProperty(window, 'supabase', {
       configurable: true,
       value: {
-        createClient: () => ({
-          channel: topic => {
-            const bc = new BroadcastChannel(topic);
-            const api = {
-              on(_type, config, handler) {
-                bc.addEventListener('message', event => {
-                  const data = event.data;
-                  if (data?.event === config?.event) handler({ payload: data.payload });
-                });
-                return api;
-              },
-              subscribe(callback) {
-                setTimeout(() => callback?.('SUBSCRIBED'), 0);
-                return api;
-              },
-              send(message) {
-                bc.postMessage(message);
-                return Promise.resolve('ok');
-              },
-              unsubscribe() {
-                try { bc.close(); } catch {}
-                return Promise.resolve();
-              },
-            };
-            return api;
-          },
-        }),
+        createClient: () => {
+          const storageKey = 'crg-fake-live-sessions-v1';
+          const readSessions = () => {
+            try { return JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { return {}; }
+          };
+          const writeSession = (code, payload) => {
+            const sessions = readSessions();
+            sessions[String(code)] = { payload, updatedAt: new Date().toISOString() };
+            localStorage.setItem(storageKey, JSON.stringify(sessions));
+          };
+          window.__crgSeedLivePayload = (code, payload) => writeSession(code, payload);
+          return {
+            from: () => {
+              const chain = {
+                _code: '',
+                select() { return chain; },
+                eq(_field, code) { chain._code = String(code); return chain; },
+                async maybeSingle() {
+                  const row = readSessions()[chain._code];
+                  return row
+                    ? { data: { payload: row.payload, updated_at: row.updatedAt }, error: null }
+                    : { data: null, error: null };
+                },
+                async upsert(row) {
+                  writeSession(row.session_code, row.payload);
+                  return { data: null, error: null };
+                },
+              };
+              return chain;
+            },
+            async rpc(name, args) {
+              if (name !== 'publish_session') return { data: null, error: { message: 'Unsupported RPC' } };
+              writeSession(args?.p_code, args?.p_payload);
+              return { data: true, error: null };
+            },
+            channel: topic => {
+              const bc = new BroadcastChannel(topic);
+              const api = {
+                on(_type, config, handler) {
+                  bc.addEventListener('message', event => {
+                    const data = event.data;
+                    if (data?.event === config?.event) handler({ payload: data.payload });
+                  });
+                  return api;
+                },
+                subscribe(callback) {
+                  setTimeout(() => callback?.('SUBSCRIBED'), 0);
+                  return api;
+                },
+                send(message) {
+                  bc.postMessage(message);
+                  return Promise.resolve('ok');
+                },
+                unsubscribe() {
+                  try { bc.close(); } catch {}
+                  return Promise.resolve();
+                },
+              };
+              return api;
+            },
+          };
+        },
       },
     });
     try {
@@ -94,7 +142,7 @@ test('Up Next keeps four visible cards on a uniform 8px outer/inter-card rhythm'
     const rects = cards.map(node => node.getBoundingClientRect());
     return {
       count: cards.length,
-      labels: cards.map(card => card.querySelector('span:first-child')?.textContent || ''),
+      labels: cards.map(card => card.querySelector('.upnext-game-no')?.textContent || ''),
       topGap: rects[0] && headerRect ? rects[0].top - headerRect.bottom : -1,
       interGaps: rects.slice(1).map((rect, i) => rect.top - rects[i].bottom),
       bottomGap: rects.at(-1) && panelRect ? panelRect.bottom - rects.at(-1).bottom : -1,
@@ -137,7 +185,7 @@ test('Live spectator link shows current game details and updates after a complet
   const sharedNames=await spectator.locator('.spectator-current .spectator-player-name').evaluateAll(nodes=>nodes.map(node=>(node.childNodes[0]?.textContent||node.textContent||'').replace(/\s+$/,'').trim()));
   expect(sharedNames).toEqual(hostNames);
 
-  const stars = await spectator.locator('.spectator-current .spectator-player small').allTextContents();
+  const stars = await spectator.locator('.spectator-current .crg-team-player small').allTextContents();
   expect(stars).toHaveLength(4);
   expect(stars.every(value => /^⭐{1,6}$/.test(value))).toBeTruthy();
   await expect(spectator.locator('#spectatorLiveTimer')).toBeVisible();

@@ -4,36 +4,84 @@ const roster = count => Array.from({ length: count }, (_, i) => 'Player ' + (i +
 
 async function installFakeSupabase(page) {
   await page.addInitScript(() => {
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      if (String(url).includes('/api/live-config')) {
+        return Promise.resolve(new Response(JSON.stringify({
+          configured: true,
+          url: 'https://fake.supabase.test',
+          publishableKey: 'fake-key',
+          source: 'test-fixture',
+        }), { status: 200, headers: { 'content-type': 'application/json' } }));
+      }
+      return originalFetch(input, init);
+    };
     Object.defineProperty(window, 'supabase', {
       configurable: true,
       value: {
-        createClient: () => ({
-          channel: topic => {
-            const bc = new BroadcastChannel(topic);
-            const api = {
-              on(_type, config, handler) {
-                bc.addEventListener('message', event => {
-                  const data = event.data;
-                  if (data?.event === config?.event) handler({ payload: data.payload });
-                });
-                return api;
-              },
-              subscribe(callback) {
-                setTimeout(() => callback?.('SUBSCRIBED'), 0);
-                return api;
-              },
-              send(message) {
-                bc.postMessage(message);
-                return Promise.resolve('ok');
-              },
-              unsubscribe() {
-                try { bc.close(); } catch {}
-                return Promise.resolve();
-              },
-            };
-            return api;
-          },
-        }),
+        createClient: () => {
+          const storageKey = 'crg-fake-live-sessions-v1';
+          const readSessions = () => {
+            try { return JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { return {}; }
+          };
+          const writeSession = (code, payload) => {
+            const sessions = readSessions();
+            sessions[String(code)] = { payload, updatedAt: new Date().toISOString() };
+            localStorage.setItem(storageKey, JSON.stringify(sessions));
+          };
+          window.__crgSeedLivePayload = (code, payload) => writeSession(code, payload);
+          return {
+            from: () => {
+              const chain = {
+                _code: '',
+                select() { return chain; },
+                eq(_field, code) { chain._code = String(code); return chain; },
+                async maybeSingle() {
+                  const row = readSessions()[chain._code];
+                  return row
+                    ? { data: { payload: row.payload, updated_at: row.updatedAt }, error: null }
+                    : { data: null, error: null };
+                },
+                async upsert(row) {
+                  writeSession(row.session_code, row.payload);
+                  return { data: null, error: null };
+                },
+              };
+              return chain;
+            },
+            async rpc(name, args) {
+              if (name !== 'publish_session') return { data: null, error: { message: 'Unsupported RPC' } };
+              writeSession(args?.p_code, args?.p_payload);
+              return { data: true, error: null };
+            },
+            channel: topic => {
+              const bc = new BroadcastChannel(topic);
+              const api = {
+                on(_type, config, handler) {
+                  bc.addEventListener('message', event => {
+                    const data = event.data;
+                    if (data?.event === config?.event) handler({ payload: data.payload });
+                  });
+                  return api;
+                },
+                subscribe(callback) {
+                  setTimeout(() => callback?.('SUBSCRIBED'), 0);
+                  return api;
+                },
+                send(message) {
+                  bc.postMessage(message);
+                  return Promise.resolve('ok');
+                },
+                unsubscribe() {
+                  try { bc.close(); } catch {}
+                  return Promise.resolve();
+                },
+              };
+              return api;
+            },
+          };
+        },
       },
     });
     try {
@@ -91,7 +139,7 @@ test('Up Next outer spacing is uniform and the panel hugs four cards', async ({ 
     const cardRects = cards.map(rect);
     return {
       count: cards.length,
-      labels: cards.map(card => card.querySelector('span:first-child')?.textContent || ''),
+      labels: cards.map(card => card.querySelector('.upnext-game-no')?.textContent || ''),
       firstGap: cardRects[0] && headRect ? cardRects[0].top - headRect.bottom : -1,
       interGap: cardRects[2] && cardRects[1] ? cardRects[2].top - cardRects[1].bottom : -1,
       bottomGap: panelRect && cardRects.at(-1) ? panelRect.bottom - cardRects.at(-1).bottom : -1,
@@ -140,8 +188,8 @@ test('Live spectator link shows canonical current game, timer, stars, and update
   expect(await spectator.locator('.spectator-current .eyebrow').first().textContent()).toContain(hostCurrent.court);
   const sharedNames = (await spectator.locator('.spectator-current .spectator-player-name').allTextContents()).map(v => v.replace(/\s+⭐+.*$/, '').trim());
   expect(sharedNames).toEqual(hostCurrent.teams);
-  expect(await spectator.locator('.spectator-current .spectator-player small').count()).toBe(4);
-  expect((await spectator.locator('.spectator-current .spectator-player small').allTextContents()).every(v => /⭐/.test(v))).toBeTruthy();
+  expect(await spectator.locator('.spectator-current .crg-team-player small').count()).toBe(4);
+  expect((await spectator.locator('.spectator-current .crg-team-player small').allTextContents()).every(v => /⭐/.test(v))).toBeTruthy();
   await expect(spectator.locator('#spectatorLiveTimer')).toBeVisible();
   await expect(spectator.locator('.spectator-progress-label')).toContainText('0 / 12 games');
   await expect(spectator.locator('.live-pill').first()).toContainText('LIVE');
