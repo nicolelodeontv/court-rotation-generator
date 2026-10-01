@@ -1,7 +1,7 @@
 (()=>{'use strict';
 const CONFIG=window.CRG_SUPABASE_CONFIG||{},TABLE='court_rotation_sessions',HOST_KEY='crg-supabase-host-key-v1',POLL_MS=4000;
 const ERRORS=window.CRG_LIVE_SYNC_ERRORS||Object.freeze({INVALID_SESSION_CODE:'Invalid session code.',INVALID_HOST_KEY:'Invalid host key.',INVALID_HOST_KEY_OR_EXPIRED:'Invalid host key or expired session.',CAPACITY_REACHED:'Capacity reached.',PAYLOAD_TOO_LARGE:'Payload too large.',PAYLOAD_REQUIRED:'Payload is required.'});window.CRG_LIVE_SYNC_ERRORS=ERRORS;
-let hostClient=null,hostClientCode='',spectatorClient=null,spectatorClientCode='',hostChannel=null,spectatorChannel=null,hostCode='',spectatorCode='',publishTimer=0,pollTimer=0,retryTimer=0,retryAttempt=0,publishRetryTimer=0,publishRetryAttempt=0,connectionOnline=false,lastRenderedAt=0;
+let hostClient=null,hostClientCode='',spectatorClient=null,spectatorClientCode='',hostChannel=null,spectatorChannel=null,hostCode='',spectatorCode='',publishTimer=0,pollTimer=0,retryTimer=0,retryAttempt=0,publishRetryTimer=0,publishRetryAttempt=0,publishRetryWaiting=false,connectionOnline=false,lastRenderedAt=0;
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let configResolved=false;const waitConfig=async()=>{if(configResolved)return CONFIG;try{await window.CRG_SUPABASE_CONFIG_READY}catch{}configResolved=true;return CONFIG};
 const configAvailable=()=>Boolean(CONFIG.url&&CONFIG.publishableKey);
