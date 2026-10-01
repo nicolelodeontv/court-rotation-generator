@@ -49,13 +49,13 @@ async function waitForWorkerActive(page) {
   );
 }
 
-test('Active/Resting toggle survives reload', async ({ page }) => {
+test('Active/Resting availability survives reload', async ({ page }) => {
   await generateSession(page, 6);
-
-  await page.locator('[data-view="playersView"]').click();
-  await expect(page.locator('#playerCards')).toBeVisible();
-  await page.locator('[data-active="1"]').uncheck();
-  await expect(page.locator('[data-active="1"]')).not.toBeChecked();
+  await page.locator('#manageAvailabilityBtn').click();
+  await expect(page.locator('.roster-sheet')).toBeVisible();
+  await page.locator('[data-roster-active="1"]').uncheck();
+  await page.locator('#rosterApply').click();
+  await expect(page.locator('.roster-sheet')).toBeHidden();
 
   const beforeReload = await readLiveState(page);
   expect(beforeReload.active).not.toContain(1);
@@ -64,8 +64,8 @@ test('Active/Resting toggle survives reload', async ({ page }) => {
   await page.waitForLoadState('domcontentloaded');
   await expect(page.locator('#currentNo')).toHaveText('GAME 1', { timeout: 5000 });
 
-  await page.locator('[data-view="playersView"]').click();
-  await expect(page.locator('[data-active="1"]')).not.toBeChecked();
+  await page.locator('#manageAvailabilityBtn').click();
+  await expect(page.locator('[data-roster-active="1"]')).not.toBeChecked();
 
   const afterReload = await readLiveState(page);
   expect(afterReload.active).not.toContain(1);
