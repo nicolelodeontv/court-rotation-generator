@@ -25,55 +25,121 @@ async function installFakeSupabase(page) {
       }
       return originalFetch(input, init);
     };
+
+    const storageKey = 'crg-fake-live-sessions-v2';
+    const readSessions = () => {
+      try { return JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { return {}; }
+    };
+    const writeSession = (code, payload, hostKey = '', expiresAt = '') => {
+      const sessions = readSessions();
+      sessions[String(code)] = {
+        session_code: String(code),
+        payload,
+        hostKey: String(hostKey || ''),
+        updatedAt: new Date().toISOString(),
+        expiresAt: expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+      localStorage.setItem(storageKey, JSON.stringify(sessions));
+    };
+
+    window.__crgSeedLivePayload = (code, payload, hostKey = '', expiresAt = '') =>
+      writeSession(code, payload, hostKey, expiresAt);
+    window.__crgRpcCalls = [];
+    window.__crgRpcErrors = [];
+    window.__crgDirectWrites = 0;
+    window.__crgSelectCalls = [];
+    window.__crgClients = [];
+
     Object.defineProperty(window, 'supabase', {
       configurable: true,
       value: {
-        createClient: () => {
-          const storageKey = 'crg-fake-live-sessions-v1';
-          const readSessions = () => {
-            try { return JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { return {}; }
-          };
-          const writeSession = (code, payload, hostKey = '') => {
-            const sessions = readSessions();
-            sessions[String(code)] = { payload, hostKey: String(hostKey || ''), updatedAt: new Date().toISOString() };
-            localStorage.setItem(storageKey, JSON.stringify(sessions));
-          };
-          window.__crgSeedLivePayload = (code, payload, hostKey = '') => writeSession(code, payload, hostKey);
-          window.__crgRpcCalls = window.__crgRpcCalls || [];
-          window.__crgDirectWrites = Number(window.__crgDirectWrites || 0);
-          window.__crgRpcErrors = window.__crgRpcErrors || [];
+        createClient: (_url, _key, options = {}) => {
+          const requestHeaders = { ...(options?.global?.headers || {}) };
+          window.__crgClients.push({ headers: requestHeaders });
           return {
             from: () => {
               const chain = {
                 _code: '',
-                select() { return chain; },
+                _columns: '',
+                select(columns) { chain._columns = String(columns); return chain; },
                 eq(_field, code) { chain._code = String(code); return chain; },
                 async maybeSingle() {
+                  window.__crgSelectCalls.push({
+                    columns: chain._columns,
+                    sessionCodeHeader: String(requestHeaders['x-crg-session-code'] || ''),
+                  });
+                  if (String(requestHeaders['x-crg-session-code'] || '') !== chain._code) {
+                    return { data: null, error: { code: '42501', message: 'permission denied' } };
+                  }
                   const row = readSessions()[chain._code];
-                  return row
-                    ? { data: { payload: row.payload, updated_at: row.updatedAt }, error: null }
-                    : { data: null, error: null };
+                  if (!row || Date.parse(row.expiresAt) <= Date.now()) {
+                    return { data: null, error: null };
+                  }
+                  return {
+                    data: {
+                      session_code: row.session_code,
+                      payload: row.payload,
+                      updated_at: row.updatedAt,
+                      expires_at: row.expiresAt,
+                    },
+                    error: null,
+                  };
                 },
-                async upsert(row) {
-                  window.__crgDirectWrites = Number(window.__crgDirectWrites || 0) + 1;
-                  writeSession(row.session_code, row.payload, row.host_key);
-                  return { data: null, error: null };
+                async upsert() {
+                  window.__crgDirectWrites += 1;
+                  return { data: null, error: { code: '42501', message: 'permission denied' } };
                 },
               };
-              return chain;
             },
             async rpc(name, args) {
               window.__crgRpcCalls.push({ name, args });
-              if (name !== 'publish_session') return { data: null, error: { message: 'Unsupported RPC' } };
-              if (window.__crgFailPublishRpc) return { data: null, error: { code: 'PGRST202', message: 'Could not find the function public.publish_session' } };
-              if (window.__crgForceRpcValidation) return { data: null, error: { code: 'P0001', message: 'Invalid host key.' } };
-              const existing = readSessions()[String(args?.p_code)];
-              if (existing?.hostKey && existing.hostKey !== String(args?.p_host_key || '')) {
-                const error = { code: 'CRG01', message: 'Session code is already owned by another host.' };
+              if (name !== 'publish_session') {
+                return { data: null, error: { code: '42883', message: 'function does not exist' } };
+              }
+              if (window.__crgFailPublishRpc) {
+                return { data: null, error: { code: 'PGRST202', message: 'Could not find the function public.publish_session' } };
+              }
+              if (window.__crgForceRpcError) {
+                const error = { code: 'P0001', message: String(window.__crgForceRpcError) };
                 window.__crgRpcErrors.push(error);
                 return { data: null, error };
               }
-              writeSession(args?.p_code, args?.p_payload, args?.p_host_key);
+
+              const code = String(args?.p_code || '');
+              const hostKey = String(args?.p_host_key || '');
+              const payload = args?.p_payload;
+
+              if (!/^CRG-[A-HJ-NP-Z2-9]{10}$/.test(code)) {
+                const error = { code: 'P0001', message: 'Invalid session code.' };
+                window.__crgRpcErrors.push(error);
+                return { data: null, error };
+              }
+              if (!hostKey || hostKey.length < 32) {
+                const error = { code: 'P0001', message: 'Invalid host key.' };
+                window.__crgRpcErrors.push(error);
+                return { data: null, error };
+              }
+              if (payload == null) {
+                const error = { code: 'P0001', message: 'Payload is required.' };
+                window.__crgRpcErrors.push(error);
+                return { data: null, error };
+              }
+              const payloadBytes = new TextEncoder().encode(JSON.stringify(payload)).byteLength;
+              if (payloadBytes > 200000) {
+                const error = { code: 'P0001', message: 'Payload too large.' };
+                window.__crgRpcErrors.push(error);
+                return { data: null, error };
+              }
+
+              const sessions = readSessions();
+              const existing = sessions[code];
+              if (existing && (existing.hostKey !== hostKey || Date.parse(existing.expiresAt) <= Date.now())) {
+                const error = { code: 'P0001', message: 'Invalid host key or expired session.' };
+                window.__crgRpcErrors.push(error);
+                return { data: null, error };
+              }
+
+              writeSession(code, payload, hostKey, existing?.expiresAt || '');
               return { data: true, error: null };
             },
             channel: topic => {
@@ -105,6 +171,7 @@ async function installFakeSupabase(page) {
         },
       },
     });
+
     try {
       Object.defineProperty(navigator, 'clipboard', {
         configurable: true,
@@ -192,6 +259,7 @@ test('Live spectator link shows current game details and updates after a complet
   await spectator.waitForLoadState('domcontentloaded');
 
   await expect(spectator.locator('.spectator-current')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.__crgSelectCalls?.some(call => call.columns === 'session_code,payload,updated_at,expires_at' && call.sessionCodeHeader === new URL(window.__crgCopiedText).searchParams.get('live')) || false)).toBeTruthy();
   await expect(spectator.locator('.spectator-current h2')).toHaveText(hostGame);
   await expect(spectator.locator('.spectator-current .eyebrow')).toContainText(hostCourt);
   await expect(spectator.locator('.spectator-current .spectator-player-name')).toHaveCount(4);
@@ -215,135 +283,141 @@ test('Live spectator link shows current game details and updates after a complet
   await spectator.close();
 });
 
-test('Restored legacy session code and host key are preserved for RPC publish', async ({ page }) => {
+test('Restored legacy session code is regenerated before secure RPC publish', async ({ page }) => {
   await installFakeSupabase(page);
   const legacyCode = 'CRG-ABC1234';
   const legacyHostKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
   await page.addInitScript(({ legacyCode, legacyHostKey }) => {
     const state = {
-      v: 2,
-      savedAt: Date.now(),
+      v: 2, savedAt: Date.now(),
       names: ['Alice', 'Bob', 'Carol', 'Dave'],
       active: [1, 2, 3, 4],
       games: [{ court: 1, teams: [[1, 2], [3, 4]], sitting: [] }],
-      done: [],
-      results: {},
-      scores: {},
-      winByTwo: false,
-      scoreWinByTwo: {},
-      locked: [],
-      score: 100,
-      config: { courts: 1, effectiveCourts: 1 },
-      sessionCode: legacyCode,
-      playerTargets: {},
-      playerMeta: {},
-      gameDurations: {},
-      gameStartedAtByIndex: { 0: Date.now() },
-      gameTimerPaused: false,
-      timerPausedIndex: null,
-      waitingCourts: {},
+      done: [], results: {}, scores: {}, winByTwo: false, scoreWinByTwo: {},
+      locked: [], score: 100, config: { courts: 1, effectiveCourts: 1 },
+      sessionCode: legacyCode, playerTargets: {}, playerMeta: {}, gameDurations: {},
+      gameStartedAtByIndex: { 0: Date.now() }, gameTimerPaused: false,
+      timerPausedIndex: null, waitingCourts: {},
     };
     localStorage.setItem('crg-live-state-v1', JSON.stringify(state));
     localStorage.setItem('crg-supabase-host-key-v1:' + legacyCode, legacyHostKey);
   }, { legacyCode, legacyHostKey });
+
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
   await expect(page.locator('#currentNo')).toHaveText('GAME 1', { timeout: 5000 });
-  await expect(page.locator('#sessionCodeText')).toContainText(legacyCode);
-  expect(await page.evaluate(code => localStorage.getItem('crg-supabase-host-key-v1:' + code), legacyCode)).toBe(legacyHostKey);
-  expect(legacyHostKey).toMatch(/^[0-9a-f]{64}$/);
+
+  const regenerated = await page.locator('#sessionCodeText').innerText();
+  expect(regenerated).toMatch(/^CRG-[A-HJ-NP-Z2-9]{10}$/);
+  expect(regenerated).not.toBe(legacyCode);
+  expect(await page.evaluate(code => localStorage.getItem('crg-supabase-host-key-v1:' + code), legacyCode)).toBeNull();
+
   const result = await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
   expect(result?.storageReady).toBeTruthy();
   const call = await page.evaluate(() => window.__crgRpcCalls?.find(x => x.name === 'publish_session'));
-  expect(call?.args?.p_code).toBe(legacyCode);
-  expect(call?.args?.p_host_key).toBe(legacyHostKey);
+  expect(call?.args?.p_code).toBe(regenerated);
+  expect(call?.args?.p_host_key).toMatch(/^[0-9a-f]{64}$/);
+  expect(call?.args?.p_host_key).not.toBe(legacyHostKey);
 });
 
-test('Legacy session-code collision is visible and renews to a new-format code', async ({ page, context }) => {
+test('Secure publish updates an existing session when the raw host key matches', async ({ page }) => {
   await installFakeSupabase(page);
-  const legacyCode = 'CRG-ABC1234';
-  const hostKeyA = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-  const hostKeyB = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
-  await page.addInitScript(({ legacyCode, hostKeyA }) => {
-    const state = {
-      v: 2,
-      savedAt: Date.now(),
-      names: ['Alice', 'Bob', 'Carol', 'Dave'],
-      active: [1, 2, 3, 4],
-      games: [{ court: 1, teams: [[1, 2], [3, 4]], sitting: [] }],
-      done: [],
-      results: {},
-      scores: {},
-      winByTwo: false,
-      scoreWinByTwo: {},
-      locked: [],
-      score: 100,
-      config: { courts: 1, effectiveCourts: 1 },
-      sessionCode: legacyCode,
-      playerTargets: {},
-      playerMeta: {},
-      gameDurations: {},
-      gameStartedAtByIndex: { 0: Date.now() },
-      gameTimerPaused: false,
-      timerPausedIndex: null,
-      waitingCourts: {},
-    };
-    localStorage.setItem('crg-live-state-v1', JSON.stringify(state));
-    localStorage.setItem('crg-supabase-host-key-v1:' + legacyCode, hostKeyA);
-  }, { legacyCode, hostKeyA });
+  await generateSession(page, 8, 12);
+  const code = await page.locator('#sessionCodeText').innerText();
 
-  await page.goto('/');
-  await page.waitForLoadState('domcontentloaded');
-  await expect(page.locator('#sessionCodeText')).toContainText(legacyCode);
-  const first = await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
-  expect(first?.storageReady).toBeTruthy();
+  await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
+  const first = await page.evaluate(c => JSON.parse(localStorage.getItem(c) || '{}'), 'crg-fake-live-sessions-v2');
+  const firstUpdated = first?.[code]?.updatedAt;
 
-  const hostB = await context.newPage();
-  await installFakeSupabase(hostB);
-  await hostB.addInitScript(({ legacyCode, hostKeyB }) => {
-    localStorage.setItem('crg-supabase-host-key-v1:' + legacyCode, hostKeyB);
-  }, { legacyCode, hostKeyB });
-  await hostB.goto('/');
-  await hostB.waitForLoadState('domcontentloaded');
+  await page.waitForTimeout(25);
+  const second = await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
+  expect(second?.storageReady).toBeTruthy();
 
-  const result = await hostB.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
-  expect(result?.storageReady).toBeTruthy();
-  expect(result?.collisionRecovered).toBeTruthy();
-  await expect(hostB.locator('#crgToast')).toContainText('Session code was already in use', { timeout: 2000 });
-
-  const errors = await hostB.evaluate(() => window.__crgRpcErrors || []);
-  expect(errors.some(e => e.code === 'CRG01' && /already owned/i.test(e.message))).toBeTruthy();
-
-  const calls = await hostB.evaluate(() => window.__crgRpcCalls || []);
-  expect(calls.some(x => x.args?.p_code === legacyCode && x.args?.p_host_key === hostKeyB)).toBeTruthy();
-  const renewed = await hostB.evaluate(() => window.__crgRpcCalls?.find(x => x.args?.p_code !== 'CRG-ABC1234')?.args?.p_code || '');
-  expect(renewed).toMatch(/^CRG-[A-HJ-NP-Z2-9]{10}$/);
-  expect(renewed).not.toBe(legacyCode);
-
-  await hostB.close();
+  const updated = await page.evaluate(c => JSON.parse(localStorage.getItem(c) || '{}'), 'crg-fake-live-sessions-v2');
+  expect(updated?.[code]?.updatedAt).not.toBe(firstUpdated);
+  expect(await page.evaluate(() => window.__crgDirectWrites || 0)).toBe(0);
+  expect(await page.evaluate(() => window.__crgRpcCalls?.filter(x => x.name === 'publish_session').length || 0)).toBe(2);
 });
 
-test('RPC validation errors are not treated as legacy-code collisions', async ({ page }) => {
+test('Secure publish renews once when the database rejects an ownership or expiry match', async ({ page }) => {
   await installFakeSupabase(page);
   await generateSession(page, 8, 12);
   const originalCode = await page.locator('#sessionCodeText').innerText();
-  await page.evaluate(() => { window.__crgForceRpcValidation = true; });
+  const existingHostKey = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  await page.evaluate(({ originalCode, existingHostKey }) => {
+    const sessions = JSON.parse(localStorage.getItem('crg-fake-live-sessions-v2') || '{}');
+    sessions[originalCode] = {
+      session_code: originalCode, payload: { occupied: true }, hostKey: existingHostKey,
+      updatedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    };
+    localStorage.setItem('crg-fake-live-sessions-v2', JSON.stringify(sessions));
+    localStorage.setItem('crg-supabase-host-key-v1:' + originalCode, 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
+  }, { originalCode, existingHostKey });
+
   const result = await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
-  expect(result?.storageReady).toBeFalsy();
-  expect(result?.collision).not.toBeTruthy();
-  expect(await page.locator('#sessionCodeText').innerText()).toBe(originalCode);
-  expect(await page.evaluate(() => window.__crgRpcCalls?.slice(-1)?.[0]?.args?.p_code)).toMatch(/^CRG-[A-Z0-9]+$/);
+  expect(result?.storageReady).toBeTruthy();
+
+  const calls = await page.evaluate(() => window.__crgRpcCalls?.filter(x => x.name === 'publish_session') || []);
+  expect(calls).toHaveLength(2);
+  expect(calls[0].args.p_code).toBe(originalCode);
+  expect(calls[0].args.p_host_key).not.toBe(existingHostKey);
+  expect(calls[1].args.p_code).toMatch(/^CRG-[A-HJ-NP-Z2-9]{10}$/);
+  expect(calls[1].args.p_code).not.toBe(originalCode);
+  expect(calls[1].args.p_host_key).toMatch(/^[0-9a-f]{64}$/);
+  expect(await page.evaluate(() => window.__crgDirectWrites || 0)).toBe(0);
 });
 
-test('Live publish falls back to direct write only when publish_session is missing', async ({ page }) => {
+test('Deployed RPC rejects legacy and short host-key inputs without client regeneration', async ({ page }) => {
+  await installFakeSupabase(page);
+  const results = await page.evaluate(async () => {
+    const sb = window.supabase.createClient('https://fake.supabase.test', 'fake-key');
+    const legacy = await sb.rpc('publish_session', {
+      p_code: 'CRG-ABC1234',
+      p_host_key: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      p_payload: { ok: true },
+    });
+    const short = await sb.rpc('publish_session', {
+      p_code: 'CRG-ABCDEFGHJK',
+      p_host_key: 'short',
+      p_payload: { ok: true },
+    });
+    return { legacy: legacy.error, short: short.error };
+  });
+  expect(results.legacy?.code).toBe('P0001');
+  expect(results.legacy?.message).toBe('Invalid session code.');
+  expect(results.short?.code).toBe('P0001');
+  expect(results.short?.message).toBe('Invalid host key.');
+});
+
+test('Ownership mismatch and expired sessions return the same generic RPC error', async ({ page }) => {
+  await installFakeSupabase(page);
+  const result = await page.evaluate(async () => {
+    const sb = window.supabase.createClient('https://fake.supabase.test', 'fake-key');
+    const code = 'CRG-ABCDEFGHJK';
+    const keyA = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    const keyB = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+    await window.__crgSeedLivePayload(code, { owner: 'A' }, keyA);
+    const wrongKey = await sb.rpc('publish_session', { p_code: code, p_host_key: keyB, p_payload: { owner: 'B' } });
+    await window.__crgSeedLivePayload(code, { owner: 'expired' }, keyA, new Date(Date.now() - 1000).toISOString());
+    const expired = await sb.rpc('publish_session', { p_code: code, p_host_key: keyA, p_payload: { owner: 'B' } });
+    return { wrongKey: wrongKey.error, expired: expired.error };
+  });
+  expect(result.wrongKey?.code).toBe('P0001');
+  expect(result.wrongKey?.message).toBe('Invalid host key or expired session.');
+  expect(result.expired?.code).toBe('P0001');
+  expect(result.expired?.message).toBe('Invalid host key or expired session.');
+});
+
+test('Live publish never falls back to a direct table write when the RPC is unavailable', async ({ page }) => {
   await installFakeSupabase(page);
   await generateSession(page, 8, 12);
   await page.evaluate(() => { window.__crgFailPublishRpc = true; });
   const result = await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
-  expect(result?.storageReady).toBeTruthy();
-  expect(await page.evaluate(() => window.__crgDirectWrites || 0)).toBeGreaterThan(0);
+  expect(result?.storageReady).toBeFalsy();
+  expect(await page.evaluate(() => window.__crgDirectWrites || 0)).toBe(0);
+  await expect(page.locator('#copyLiveSpectatorBtn')).toHaveText('Live sync unavailable · retrying');
 });
-
 
 test('Ranks Share Results works before results and stays live after standings change', async ({ page, context }) => {
   await installFakeSupabase(page);
