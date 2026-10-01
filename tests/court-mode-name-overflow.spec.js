@@ -20,6 +20,10 @@ async function stubClipboard(page) {
 }
 
 async function generate(page, courts = 1) {
+  await page.evaluate(() => {
+    localStorage.removeItem('crg-live-state-v1');
+    localStorage.removeItem('crg-setup-nav-hidden-v1');
+  }).catch(() => {});
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
   await page.locator('#courts').fill(String(courts));
