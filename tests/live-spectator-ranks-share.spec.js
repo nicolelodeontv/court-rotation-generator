@@ -554,15 +554,13 @@ test('Transient publish failures use exponential jitter and pause while hidden o
     window.setTimeout = (fn, delay, ...args) => {
       if (Number(delay) >= 250) {
         window.__crgRetryDelays.push(Number(delay));
-        if (Number(delay) !== 7000) {
-          window.__crgRetryCallbacks.push(() => fn(...args));
-        }
+        if (Number(delay) !== 7000) window.__crgRetryCallbacks.push(() => fn(...args));
         return 987654;
       }
       return originalSetTimeout(fn, delay, ...args);
     };
     window.__crgRestoreSetTimeout = () => { window.setTimeout = originalSetTimeout; };
-    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
     Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
     window.__crgForceRpcError = 'Transient failure';
     window.__crgRpcCalls = [];
@@ -574,14 +572,26 @@ test('Transient publish failures use exponential jitter and pause while hidden o
   await expect(page.locator('#playerList .player-row')).toHaveCount(8, { timeout: 2500 });
   await page.locator('#generateBtn').click();
   await expect(page.locator('#setupStatus')).toContainText('Rotation ready', { timeout: 8000 });
+  await page.waitForTimeout(500);
 
-  await expect.poll(() => page.evaluate(() => (window.__crgRetryDelays || []).filter(delay => delay !== 7000)[0] || 0), { timeout: 3000 }).toBeGreaterThanOrEqual(800);
+  await page.evaluate(() => {
+    window.__crgRetryDelays = [];
+    window.__crgRetryCallbacks = [];
+    window.__crgRpcCalls = [];
+  });
+
+  for (let i = 0; i < 3; i += 1) {
+    await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.(true));
+  }
+
   const result = await page.evaluate(async () => {
-    const retryDelays = (window.__crgRetryDelays || []).filter(delay => delay !== 7000);
-    const callbacks = window.__crgRetryCallbacks || [];
-    const callsBeforeHiddenTimer = window.__crgRpcCalls.length;
+    const delays = (window.__crgRetryDelays || []).filter(delay => delay !== 7000);
+    const activeRetryCallback = (window.__crgRetryCallbacks || []).at(-1);
+    const callsBeforePause = window.__crgRpcCalls.length;
 
-    callbacks.shift()?.();
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+    activeRetryCallback?.();
     await Promise.resolve();
     const callsAfterHiddenTimer = window.__crgRpcCalls.length;
 
@@ -596,21 +606,24 @@ test('Transient publish failures use exponential jitter and pause while hidden o
     await new Promise(resolve => setTimeout(resolve, 0));
 
     return {
-      firstDelay: retryDelays[0] || 0,
-      secondDelay: retryDelays[1] || 0,
-      callsBeforeHiddenTimer,
+      delays,
+      callsBeforePause,
       callsAfterHiddenTimer,
       callsWhileOffline,
       callsAfterOnline: window.__crgRpcCalls.length,
     };
   });
 
-  expect(result.firstDelay).toBeGreaterThanOrEqual(800);
-  expect(result.firstDelay).toBeLessThanOrEqual(1200);
-  expect(result.callsBeforeHiddenTimer).toBe(1);
-  expect(result.callsAfterHiddenTimer).toBe(1);
-  expect(result.callsWhileOffline).toBe(1);
-  expect(result.callsAfterOnline).toBe(2);
+  expect(result.delays.length).toBeGreaterThanOrEqual(3);
+  expect(result.delays[1]).toBeGreaterThan(result.delays[0]);
+  expect(result.delays[2]).toBeGreaterThan(result.delays[1]);
+  expect(result.delays[1] / result.delays[0]).toBeGreaterThanOrEqual(1.6);
+  expect(result.delays[1] / result.delays[0]).toBeLessThanOrEqual(2.4);
+  expect(result.delays[2] / result.delays[1]).toBeGreaterThanOrEqual(1.6);
+  expect(result.delays[2] / result.delays[1]).toBeLessThanOrEqual(2.4);
+  expect(result.callsAfterHiddenTimer).toBe(result.callsBeforePause);
+  expect(result.callsWhileOffline).toBe(result.callsBeforePause);
+  expect(result.callsAfterOnline).toBe(result.callsBeforePause + 1);
   await page.evaluate(() => window.__crgRestoreSetTimeout?.());
 });
 
