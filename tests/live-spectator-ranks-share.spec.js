@@ -59,10 +59,8 @@ async function installFakeSupabase(page, options = {}) {
     window.__crgSelectCalls = [];
     window.__crgClients = [];
 
-    Object.defineProperty(window, 'supabase', {
-      configurable: true,
-      value: {
-        createClient: (_url, _key, options = {}) => {
+    const fakeSupabase = {
+      createClient: (_url, _key, options = {}) => {
           const requestHeaders = { ...(options?.global?.headers || {}) };
           window.__crgClients.push({ headers: requestHeaders });
           return {
@@ -183,7 +181,11 @@ async function installFakeSupabase(page, options = {}) {
             },
           };
         },
-      },
+    };
+    Object.defineProperty(window, 'supabase', {
+      configurable: true,
+      get: () => fakeSupabase,
+      set: () => {},
     });
 
     try {
