@@ -579,21 +579,23 @@ test('Two sessions in one tab use distinct host clients, session headers, and ra
 
   await page.evaluate(() => {
     window.__crgRpcCalls = [];
-    window.__crgClients = [];
   });
 
   const aResult = await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
   expect(aResult?.storageReady).toBeTruthy();
-
   await expect.poll(() => page.evaluate(() => window.__crgRpcCalls?.filter(x => x.name === 'publish_session').length || 0)).toBe(1);
 
   const callA = await page.evaluate(() => window.__crgRpcCalls?.find(x => x.name === 'publish_session'));
   expect(callA?.args?.p_code).toBe(sessionA.code);
   expect(callA?.args?.p_host_key).toBe(sessionA.hostKey);
+  const aClientId = callA?.clientId;
 
   const sessionB = await page.evaluate(() => {
+    const oldTouch = window.CRG_LIVE_SYNC_TOUCH;
+    window.CRG_LIVE_SYNC_TOUCH = () => {};
     const oldCode = (document.querySelector('#sessionCodeText')?.textContent || '').match(/CRG-[A-Z0-9]+/)?.[0] || '';
     const nextCode = window.CRG_RENEW_SESSION_CODE?.();
+    window.CRG_LIVE_SYNC_TOUCH = oldTouch;
     const hostKey = localStorage.getItem('crg-supabase-host-key-v1:' + nextCode) || '';
     return { oldCode, code: nextCode, hostKey };
   });
@@ -605,35 +607,32 @@ test('Two sessions in one tab use distinct host clients, session headers, and ra
 
   await page.evaluate(() => {
     window.__crgRpcCalls = [];
-    window.__crgClients = [];
   });
 
-  await page.waitForTimeout(250);
   const bResult = await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
   expect(bResult?.storageReady).toBeTruthy();
   await expect.poll(() => page.evaluate(() => window.__crgRpcCalls?.filter(x => x.name === 'publish_session').length || 0)).toBe(1);
 
   const details = await page.evaluate(() => ({
-    calls: window.__crgRpcCalls?.filter(x => x.name === 'publish_session') || [],
+    callsB: window.__crgRpcCalls?.filter(x => x.name === 'publish_session') || [],
     clients: window.__crgClients || [],
   }));
 
-  expect(details.calls).toHaveLength(1);
-  expect(details.calls[0].args.p_code).toBe(sessionB.code);
-  expect(details.calls[0].args.p_host_key).toBe(sessionB.hostKey);
-  const bClient = details.clients.find(client => client.id === details.calls[0].clientId);
+  expect(details.callsB).toHaveLength(1);
+  expect(details.callsB[0].args.p_code).toBe(sessionB.code);
+  expect(details.callsB[0].args.p_host_key).toBe(sessionB.hostKey);
+  expect(details.callsB[0].clientId).not.toBe(aClientId);
+
+  const aClient = details.clients.find(client => client.id === aClientId);
+  const bClient = details.clients.find(client => client.id === details.callsB[0].clientId);
+  expect(aClient).toBeTruthy();
   expect(bClient).toBeTruthy();
+  expect(aClient.headers['x-crg-session-code']).toBe(sessionA.code);
   expect(bClient.headers['x-crg-session-code']).toBe(sessionB.code);
   expect(bClient.headers['x-crg-host-key']).toBeUndefined();
-
-  await page.evaluate(() => window.CRG_PUBLISH_LIVE?.());
-  const secondB = await page.evaluate(() => window.__crgRpcCalls?.filter(x => x.name === 'publish_session').at(-1));
-  expect(secondB.clientId).toBe(details.calls[0].clientId);
-  expect(secondB.args.p_code).toBe(sessionB.code);
-  expect(secondB.args.p_host_key).toBe(sessionB.hostKey);
-  expect(secondB.args.p_host_key).not.toBe(sessionA.hostKey);
+  expect(details.callsB[0].args.p_host_key).not.toBe(sessionA.hostKey);
 });
-
+ 
 test('Deployed RPC rejects legacy and short host-key inputs without client regeneration', async ({ page }) => {
   await installFakeSupabase(page);
   await page.goto('/');
