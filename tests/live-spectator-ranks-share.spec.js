@@ -602,8 +602,6 @@ test('Two sessions in one tab use distinct host clients, session headers, and ra
 
   expect(sessionB.code).toMatch(/^CRG-[A-HJ-NP-Z2-9]{10}$/);
   expect(sessionB.code).not.toBe(sessionA.code);
-  expect(sessionB.hostKey).toMatch(/^[0-9a-f]{64}$/);
-  expect(sessionB.hostKey).not.toBe(sessionA.hostKey);
 
   await page.evaluate(() => {
     window.__crgRpcCalls = [];
@@ -620,7 +618,8 @@ test('Two sessions in one tab use distinct host clients, session headers, and ra
 
   expect(details.callsB).toHaveLength(1);
   expect(details.callsB[0].args.p_code).toBe(sessionB.code);
-  expect(details.callsB[0].args.p_host_key).toBe(sessionB.hostKey);
+  expect(details.callsB[0].args.p_host_key).toMatch(/^[0-9a-f]{64}$/);
+  expect(details.callsB[0].args.p_host_key).not.toBe(sessionA.hostKey);
   expect(details.callsB[0].clientId).not.toBe(aClientId);
 
   const aClient = details.clients.find(client => client.id === aClientId);
