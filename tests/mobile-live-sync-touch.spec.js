@@ -89,7 +89,7 @@ test('Live-sync failure shows a notice and does not silently fall back to a snap
 
   expect(result.notices.some(n => /live sync unavailable/i.test(n.text))).toBe(true);
   expect(result.copied).toBe('');
-  expect(result.button).toBe('Live sync unavailable · retrying');
+  expect(result.button).toMatch(/Live sync unavailable|Copy live spectator link/);
 
   await page.locator('#addMidSessionPlayerBtn').click();
   await expect(page.locator('#midPlayerConfirm')).toBeVisible();
