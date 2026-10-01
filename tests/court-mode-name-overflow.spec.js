@@ -6,6 +6,9 @@ const LONG_NAMES = [
   'ChristopherWithAVeryLongPlayerNameThree',
   'DominiqueAnotherExceptionallyLongNameFour',
   'EmilianotheLongestPlayerNameFive',
+  'FrancescaWithAnExtremelyLongNameSix',
+  'GabrielleAnotherVeryLongPlayerNameSeven',
+  'HarrisonWithAnExceptionallyLongNameEight',
 ];
 
 async function stubClipboard(page) {
