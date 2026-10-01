@@ -295,3 +295,5 @@ body.court-mode #liveView .court-card{min-height:0}
   word-break:normal!important;
   box-sizing:border-box!important;
 }
+/* Keep the dragged card above the Up Next layout's !important positioning rule. */
+#liveView .upnext-list .next-item.upnext-dragging-card{position:absolute!important}
