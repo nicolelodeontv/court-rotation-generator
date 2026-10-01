@@ -181,6 +181,10 @@ async function installFakeSupabase(page) {
   });
 }
 
+async function currentSessionCode(page) {
+  return (await page.locator('#sessionCodeText').innerText()).match(/CRG-[A-Z0-9]+/)?.[0] || '';
+}
+
 async function generateSession(page, playerCount, expectedGames) {
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
@@ -252,6 +256,9 @@ test('Live spectator link shows current game details and updates after a complet
   await page.locator('#copyLiveSpectatorBtn').click();
   await expect.poll(() => page.evaluate(() => window.__crgCopiedText || '')).toMatch(/(?:\\?|&)live=CRG-[A-Z0-9]+/);
   const liveUrl = await page.evaluate(() => window.__crgCopiedText);
+  const liveCode = new URL(liveUrl).searchParams.get('live');
+  expect(liveCode).toMatch(/^CRG-[A-HJ-NP-Z2-9]{10}$/);
+  expect(await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('crg-fake-live-sessions-v2') || '{}')).length)).toBeGreaterThan(0);
 
   const spectator = await context.newPage();
   await installFakeSupabase(spectator);
@@ -259,7 +266,7 @@ test('Live spectator link shows current game details and updates after a complet
   await spectator.waitForLoadState('domcontentloaded');
 
   await expect(spectator.locator('.spectator-current')).toBeVisible();
-  await expect.poll(() => page.evaluate(() => window.__crgSelectCalls?.some(call => call.columns === 'session_code,payload,updated_at,expires_at' && call.sessionCodeHeader === new URL(window.__crgCopiedText).searchParams.get('live')) || false)).toBeTruthy();
+  await expect.poll(() => spectator.evaluate(expected => window.__crgSelectCalls?.some(call => call.columns === 'session_code,payload,updated_at,expires_at' && call.sessionCodeHeader === expected) || false, liveCode)).toBeTruthy();
   await expect(spectator.locator('.spectator-current h2')).toHaveText(hostGame);
   await expect(spectator.locator('.spectator-current .eyebrow')).toContainText(hostCourt);
   await expect(spectator.locator('.spectator-current .spectator-player-name')).toHaveCount(4);
@@ -307,7 +314,7 @@ test('Restored legacy session code is regenerated before secure RPC publish', as
   await page.waitForLoadState('domcontentloaded');
   await expect(page.locator('#currentNo')).toHaveText('GAME 1', { timeout: 5000 });
 
-  const regenerated = await page.locator('#sessionCodeText').innerText();
+  const regenerated = await currentSessionCode(page);
   expect(regenerated).toMatch(/^CRG-[A-HJ-NP-Z2-9]{10}$/);
   expect(regenerated).not.toBe(legacyCode);
   expect(await page.evaluate(code => localStorage.getItem('crg-supabase-host-key-v1:' + code), legacyCode)).toBeNull();
@@ -323,7 +330,7 @@ test('Restored legacy session code is regenerated before secure RPC publish', as
 test('Secure publish updates an existing session when the raw host key matches', async ({ page }) => {
   await installFakeSupabase(page);
   await generateSession(page, 8, 12);
-  const code = await page.locator('#sessionCodeText').innerText();
+  const code = await currentSessionCode(page);
 
   await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
   const first = await page.evaluate(c => JSON.parse(localStorage.getItem(c) || '{}'), 'crg-fake-live-sessions-v2');
@@ -342,7 +349,7 @@ test('Secure publish updates an existing session when the raw host key matches',
 test('Secure publish renews once when the database rejects an ownership or expiry match', async ({ page }) => {
   await installFakeSupabase(page);
   await generateSession(page, 8, 12);
-  const originalCode = await page.locator('#sessionCodeText').innerText();
+  const originalCode = await currentSessionCode(page);
   const existingHostKey = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
   await page.evaluate(({ originalCode, existingHostKey }) => {
     const sessions = JSON.parse(localStorage.getItem('crg-fake-live-sessions-v2') || '{}');
@@ -370,6 +377,8 @@ test('Secure publish renews once when the database rejects an ownership or expir
 
 test('Deployed RPC rejects legacy and short host-key inputs without client regeneration', async ({ page }) => {
   await installFakeSupabase(page);
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
   const results = await page.evaluate(async () => {
     const sb = window.supabase.createClient('https://fake.supabase.test', 'fake-key');
     const legacy = await sb.rpc('publish_session', {
@@ -392,6 +401,8 @@ test('Deployed RPC rejects legacy and short host-key inputs without client regen
 
 test('Ownership mismatch and expired sessions return the same generic RPC error', async ({ page }) => {
   await installFakeSupabase(page);
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
   const result = await page.evaluate(async () => {
     const sb = window.supabase.createClient('https://fake.supabase.test', 'fake-key');
     const code = 'CRG-ABCDEFGHJK';
@@ -416,7 +427,7 @@ test('Live publish never falls back to a direct table write when the RPC is unav
   const result = await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
   expect(result?.storageReady).toBeFalsy();
   expect(await page.evaluate(() => window.__crgDirectWrites || 0)).toBe(0);
-  await expect(page.locator('#copyLiveSpectatorBtn')).toHaveText('Live sync unavailable · retrying');
+  await expect(page.locator('#crgToast')).toContainText('Live sync unavailable', { timeout: 1000 });
 });
 
 test('Ranks Share Results works before results and stays live after standings change', async ({ page, context }) => {
