@@ -31,7 +31,7 @@ async function generate(page, courts = 1) {
   await expect(page.locator('#currentNo')).toHaveText('GAME 1', { timeout: 5000 });
 }
 
-async async function assertNamesVisible(page, selector) {
+async function assertNamesVisible(page, selector) {
   const metrics = await page.locator(selector).evaluateAll(nodes => nodes.map(node => ({
     text: node.textContent.trim(),
     width: node.getBoundingClientRect().width,
