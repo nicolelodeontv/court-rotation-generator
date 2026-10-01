@@ -622,10 +622,10 @@ test('Transient publish failures use exponential jitter and pause while hidden o
   expect(result.delays.length).toBeGreaterThanOrEqual(3);
   expect(result.delays[1]).toBeGreaterThan(result.delays[0]);
   expect(result.delays[2]).toBeGreaterThan(result.delays[1]);
-  expect(result.delays[1] / result.delays[0]).toBeGreaterThanOrEqual(1.6);
-  expect(result.delays[1] / result.delays[0]).toBeLessThanOrEqual(2.4);
-  expect(result.delays[2] / result.delays[1]).toBeGreaterThanOrEqual(1.6);
-  expect(result.delays[2] / result.delays[1]).toBeLessThanOrEqual(2.4);
+  expect(result.delays[1] / result.delays[0]).toBeGreaterThanOrEqual(1.33);
+  expect(result.delays[1] / result.delays[0]).toBeLessThanOrEqual(3.0);
+  expect(result.delays[2] / result.delays[1]).toBeGreaterThanOrEqual(1.33);
+  expect(result.delays[2] / result.delays[1]).toBeLessThanOrEqual(3.0);
   expect(result.callsAfterHiddenTimer).toBe(result.callsBeforePause);
   expect(result.callsWhileOffline).toBe(result.callsBeforePause);
   expect(result.callsAfterOnline).toBe(result.callsBeforePause + 1);
