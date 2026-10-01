@@ -4,6 +4,7 @@ let collapsedCourts=new Set(),sessionKey='';
 const esc=value=>String(value??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
 window.CRG_FORMAT_LIVE_PLAYER=(name,skill)=>window.CRG_TEAM_RENDERER?.renderPlayer({name,skill});
 function statusLabel(status){return status==='playing'?'PLAYING':status==='waiting'?'WAITING':'COMPLETE'}
+// Safe render hook: explicit callers invoke CRG_RENDER_LIVE_DISPLAY; render updates are explicit, not observer-driven.
 function render(model){
   if(!root)return;
   if(!model?.multiCourt){root.hidden=true;return}
