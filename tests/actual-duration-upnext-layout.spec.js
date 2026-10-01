@@ -25,6 +25,17 @@ async function completeCurrentGame(page, waitMs = 0) {
   await page.locator('#scoreConfirm').click();
 }
 
+async function assertUpNextPlayerNamesVisible(page) {
+  const names = page.locator('#upNextList .crg-team-player-name');
+  expect(await names.count()).toBeGreaterThan(0);
+  await expect(names.first()).toBeVisible();
+  for (const n of await names.all()) {
+    const box = await n.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box.height).toBeGreaterThan(0);
+  }
+}
+
 function formatDuration(totalSeconds) {
   const total = Math.max(0, Number(totalSeconds));
   const display = total < 10 ? Number(total.toFixed(1)) : Math.round(total);
@@ -47,6 +58,7 @@ test('Feature 26 shows four upcoming games and keeps total remaining count accur
   await generateSession(page, 10, 15);
 
   await expect(page.locator('#upNextList .next-item')).toHaveCount(4);
+  await assertUpNextPlayerNamesVisible(page);
   await expect(page.locator('#upNextList .next-item > span:first-child').allTextContents()).resolves.toEqual([
     'Game 2', 'Game 3', 'Game 4', 'Game 5'
   ]);
@@ -71,6 +83,7 @@ test('Feature 26 shows four upcoming games and keeps total remaining count accur
   await completeCurrentGame(page);
   await expect(page.locator('#currentNo')).toHaveText('GAME 2');
   await expect(page.locator('#upNextList .next-item')).toHaveCount(4);
+  await assertUpNextPlayerNamesVisible(page);
   await expect(page.locator('#upNextList .next-item > span:first-child').allTextContents()).resolves.toEqual([
     'Game 3', 'Game 4', 'Game 5', 'Game 6'
   ]);
@@ -218,4 +231,30 @@ test('More right column stacks Session summary and Reset session with normal spa
   expect(layout.rightColumnDisplay).toBe('flex');
   expect(layout.rightColumnDirection).toBe('column');
   expect(layout.rightBottom).toBeCloseTo(layout.resetBottom, 0);
+});
+
+test('Up Next player names stay visible in two-court and narrow-phone layouts', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.removeItem('crg-live-state-v1');
+    localStorage.removeItem('crg-setup-nav-hidden-v1');
+  });
+
+  const cases = [
+    { width: 1280, height: 900, courts: 2, expectedGames: 15 },
+    { width: 390, height: 844, courts: 1, expectedGames: 15 },
+  ];
+
+  for (const { width, height, courts, expectedGames } of cases) {
+    await page.setViewportSize({ width, height });
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+    await page.locator('#courts').fill(String(courts));
+    await page.locator('#playerPasteBtn').click();
+    await page.locator('#pastePlayerNames').fill(roster(10));
+    await page.locator('#playerConfirm').click();
+    await page.locator('#generateBtn').click();
+    await expect(page.locator('#currentNo')).toHaveText('GAME 1', { timeout: 5000 });
+    await expect(page.locator('.game-match')).toHaveCount(expectedGames, { timeout: 5000 });
+    await assertUpNextPlayerNamesVisible(page);
+  }
 });

@@ -264,7 +264,7 @@ main,.view,.card,.hero,.live-card,.ranking-hero,.live-main-column,.live-upnext-c
 
 /* Combined release: nested Up Next player markup stays inline and truncates only the name text. */
 #upNextList .upnext-matchup{display:flex;align-items:center;min-width:0;overflow:hidden;white-space:nowrap}
-#upNextList .upnext-matchup .live-player-name{display:inline-flex!important;align-items:baseline;flex:1 1 0;min-width:0;max-width:none;overflow:hidden;white-space:nowrap!important;overflow-wrap:normal;word-break:normal}
+#upNextList .upnext-matchup .live-player-name{display:inline-flex!important;align-items:baseline;min-width:0;max-width:none;overflow:hidden;white-space:nowrap!important;overflow-wrap:normal;word-break:normal}
 #upNextList .upnext-player-name-text{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #upNextList .upnext-matchup .live-player-stars{display:inline-block;flex:0 0 auto;white-space:nowrap;font-size:.72em;letter-spacing:-.04em}
 #upNextList .upnext-and,#upNextList .upnext-vs{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;white-space:nowrap}
