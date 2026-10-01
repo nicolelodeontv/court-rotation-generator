@@ -182,8 +182,10 @@ async function installFakeSupabase(page, options = {}) {
           };
         },
     };
+    window.__crgFakeSupabase = fakeSupabase;
     Object.defineProperty(window, 'supabase', {
-      configurable: true,
+      configurable: false,
+      enumerable: true,
       get: () => fakeSupabase,
       set: () => {},
     });
@@ -360,11 +362,11 @@ test('RLS returns no rows when the spectator session-code header is missing or w
   await page.waitForLoadState('domcontentloaded');
 
   const result = await page.evaluate(async () => {
-    const matching = window.supabase.createClient('https://fake.supabase.test', 'fake-key', {
+    const matching = window.__crgFakeSupabase.createClient('https://fake.supabase.test', 'fake-key', {
       global: { headers: { 'x-crg-session-code': 'CRG-ABCDEFGHJK' } },
     });
-    const missing = window.supabase.createClient('https://fake.supabase.test', 'fake-key');
-    const wrong = window.supabase.createClient('https://fake.supabase.test', 'fake-key', {
+    const missing = window.__crgFakeSupabase.createClient('https://fake.supabase.test', 'fake-key');
+    const wrong = window.__crgFakeSupabase.createClient('https://fake.supabase.test', 'fake-key', {
       global: { headers: { 'x-crg-session-code': 'CRG-ZZZZZZZZZZ' } },
     });
     await window.__crgSeedLivePayload('CRG-ABCDEFGHJK', { ok: true }, 'a'.repeat(64));
@@ -390,7 +392,7 @@ test('Spectator and table reads cannot request the hidden host key column', asyn
   await page.waitForLoadState('domcontentloaded');
 
   const result = await page.evaluate(async () => {
-    const sb = window.supabase.createClient('https://fake.supabase.test', 'fake-key', {
+    const sb = window.__crgFakeSupabase.createClient('https://fake.supabase.test', 'fake-key', {
       global: { headers: { 'x-crg-session-code': 'CRG-ABCDEFGHJK' } },
     });
     const hidden = await sb.from('court_rotation_sessions').select('host_key').eq('session_code', 'CRG-ABCDEFGHJK').maybeSingle();
