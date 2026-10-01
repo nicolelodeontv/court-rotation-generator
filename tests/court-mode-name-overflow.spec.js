@@ -70,29 +70,6 @@ test('Court Mode keeps long player names inside the player cards at 390px and 12
     const cardMetrics = await cards.evaluateAll(nodes => nodes.map(node => ({
       scrollWidth: node.scrollWidth,
       clientWidth: node.clientWidth,
-      overflowChain: (() => {
-        const name = node.querySelector('.crg-team-player-name');
-        const chain = [];
-        let el = name;
-        for (let depth = 0; el && depth < 8; depth++, el = el.parentElement) {
-          const s = getComputedStyle(el);
-          chain.push({
-            tag: el.tagName,
-            id: el.id,
-            className: el.className,
-            clientWidth: el.clientWidth,
-            scrollWidth: el.scrollWidth,
-            width: el.getBoundingClientRect().width,
-            minWidth: s.minWidth,
-            maxWidth: s.maxWidth,
-            display: s.display,
-            gridTemplateColumns: s.gridTemplateColumns,
-            flexDirection: s.flexDirection,
-            overflow: s.overflow,
-          });
-        }
-        return chain;
-      })(),
     })));
     for (const metric of cardMetrics) {
       expect(metric.scrollWidth, `Court Mode card overflowed: ${JSON.stringify(metric)}`).toBeLessThanOrEqual(metric.clientWidth);
