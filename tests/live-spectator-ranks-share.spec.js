@@ -33,12 +33,15 @@ async function installFakeSupabase(page) {
           const readSessions = () => {
             try { return JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { return {}; }
           };
-          const writeSession = (code, payload) => {
+          const writeSession = (code, payload, hostKey = '') => {
             const sessions = readSessions();
-            sessions[String(code)] = { payload, updatedAt: new Date().toISOString() };
+            sessions[String(code)] = { payload, hostKey: String(hostKey || ''), updatedAt: new Date().toISOString() };
             localStorage.setItem(storageKey, JSON.stringify(sessions));
           };
-          window.__crgSeedLivePayload = (code, payload) => writeSession(code, payload);
+          window.__crgSeedLivePayload = (code, payload, hostKey = '') => writeSession(code, payload, hostKey);
+          window.__crgRpcCalls = window.__crgRpcCalls || [];
+          window.__crgDirectWrites = Number(window.__crgDirectWrites || 0);
+          window.__crgRpcErrors = window.__crgRpcErrors || [];
           return {
             from: () => {
               const chain = {
@@ -52,15 +55,25 @@ async function installFakeSupabase(page) {
                     : { data: null, error: null };
                 },
                 async upsert(row) {
-                  writeSession(row.session_code, row.payload);
+                  window.__crgDirectWrites = Number(window.__crgDirectWrites || 0) + 1;
+                  writeSession(row.session_code, row.payload, row.host_key);
                   return { data: null, error: null };
                 },
               };
               return chain;
             },
             async rpc(name, args) {
+              window.__crgRpcCalls.push({ name, args });
               if (name !== 'publish_session') return { data: null, error: { message: 'Unsupported RPC' } };
-              writeSession(args?.p_code, args?.p_payload);
+              if (window.__crgFailPublishRpc) return { data: null, error: { code: 'PGRST202', message: 'Could not find the function public.publish_session' } };
+              if (window.__crgForceRpcValidation) return { data: null, error: { code: 'P0001', message: 'Invalid host key.' } };
+              const existing = readSessions()[String(args?.p_code)];
+              if (existing?.hostKey && existing.hostKey !== String(args?.p_host_key || '')) {
+                const error = { code: 'CRG01', message: 'Session code is already owned by another host.' };
+                window.__crgRpcErrors.push(error);
+                return { data: null, error };
+              }
+              writeSession(args?.p_code, args?.p_payload, args?.p_host_key);
               return { data: true, error: null };
             },
             channel: topic => {
@@ -191,6 +204,7 @@ test('Live spectator link shows current game details and updates after a complet
   await expect(spectator.locator('#spectatorLiveTimer')).toBeVisible();
   await expect(spectator.locator('.spectator-progress-label')).toContainText('0 / 12 games');
   await expect(spectator.locator('.live-pill').first()).toContainText('LIVE');
+  await expect.poll(() => page.evaluate(() => window.__crgRpcCalls?.some(call => call.name === 'publish_session') || false), { timeout: 3000 }).toBeTruthy();
 
   await completeCurrentGame(page);
   await expect(page.locator('#currentNo')).toHaveText('GAME 2');
@@ -200,6 +214,136 @@ test('Live spectator link shows current game details and updates after a complet
 
   await spectator.close();
 });
+
+test('Restored legacy session code and host key are preserved for RPC publish', async ({ page }) => {
+  await installFakeSupabase(page);
+  const legacyCode = 'CRG-ABC1234';
+  const legacyHostKey = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+  await page.addInitScript(({ legacyCode, legacyHostKey }) => {
+    const state = {
+      v: 2,
+      savedAt: Date.now(),
+      names: ['Alice', 'Bob', 'Carol', 'Dave'],
+      active: [1, 2, 3, 4],
+      games: [{ court: 1, teams: [[1, 2], [3, 4]], sitting: [] }],
+      done: [],
+      results: {},
+      scores: {},
+      winByTwo: false,
+      scoreWinByTwo: {},
+      locked: [],
+      score: 100,
+      config: { courts: 1, effectiveCourts: 1 },
+      sessionCode: legacyCode,
+      playerTargets: {},
+      playerMeta: {},
+      gameDurations: {},
+      gameStartedAtByIndex: { 0: Date.now() },
+      gameTimerPaused: false,
+      timerPausedIndex: null,
+      waitingCourts: {},
+    };
+    localStorage.setItem('crg-live-state-v1', JSON.stringify(state));
+    localStorage.setItem('crg-supabase-host-key-v1:' + legacyCode, legacyHostKey);
+  }, { legacyCode, legacyHostKey });
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+  await expect(page.locator('#currentNo')).toHaveText('GAME 1', { timeout: 5000 });
+  await expect(page.locator('#sessionCodeText')).toContainText(legacyCode);
+  expect(await page.evaluate(code => localStorage.getItem('crg-supabase-host-key-v1:' + code), legacyCode)).toBe(legacyHostKey);
+  expect(legacyHostKey).toMatch(/^[0-9a-f]{64}$/);
+  const result = await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
+  expect(result?.storageReady).toBeTruthy();
+  const call = await page.evaluate(() => window.__crgRpcCalls?.find(x => x.name === 'publish_session'));
+  expect(call?.args?.p_code).toBe(legacyCode);
+  expect(call?.args?.p_host_key).toBe(legacyHostKey);
+});
+
+test('Legacy session-code collision is visible and renews to a new-format code', async ({ page, context }) => {
+  await installFakeSupabase(page);
+  const legacyCode = 'CRG-ABC1234';
+  const hostKeyA = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  const hostKeyB = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+  await page.addInitScript(({ legacyCode, hostKeyA }) => {
+    const state = {
+      v: 2,
+      savedAt: Date.now(),
+      names: ['Alice', 'Bob', 'Carol', 'Dave'],
+      active: [1, 2, 3, 4],
+      games: [{ court: 1, teams: [[1, 2], [3, 4]], sitting: [] }],
+      done: [],
+      results: {},
+      scores: {},
+      winByTwo: false,
+      scoreWinByTwo: {},
+      locked: [],
+      score: 100,
+      config: { courts: 1, effectiveCourts: 1 },
+      sessionCode: legacyCode,
+      playerTargets: {},
+      playerMeta: {},
+      gameDurations: {},
+      gameStartedAtByIndex: { 0: Date.now() },
+      gameTimerPaused: false,
+      timerPausedIndex: null,
+      waitingCourts: {},
+    };
+    localStorage.setItem('crg-live-state-v1', JSON.stringify(state));
+    localStorage.setItem('crg-supabase-host-key-v1:' + legacyCode, hostKeyA);
+  }, { legacyCode, hostKeyA });
+
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+  await expect(page.locator('#sessionCodeText')).toContainText(legacyCode);
+  const first = await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
+  expect(first?.storageReady).toBeTruthy();
+
+  const hostB = await context.newPage();
+  await installFakeSupabase(hostB);
+  await hostB.addInitScript(({ legacyCode, hostKeyB }) => {
+    localStorage.setItem('crg-supabase-host-key-v1:' + legacyCode, hostKeyB);
+  }, { legacyCode, hostKeyB });
+  await hostB.goto('/');
+  await hostB.waitForLoadState('domcontentloaded');
+
+  const result = await hostB.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
+  expect(result?.storageReady).toBeTruthy();
+  expect(result?.collisionRecovered).toBeTruthy();
+  await expect(hostB.locator('#crgToast')).toContainText('Session code was already in use', { timeout: 2000 });
+
+  const errors = await hostB.evaluate(() => window.__crgRpcErrors || []);
+  expect(errors.some(e => e.code === 'CRG01' && /already owned/i.test(e.message))).toBeTruthy();
+
+  const calls = await hostB.evaluate(() => window.__crgRpcCalls || []);
+  expect(calls.some(x => x.args?.p_code === legacyCode && x.args?.p_host_key === hostKeyB)).toBeTruthy();
+  const renewed = await hostB.evaluate(() => window.__crgRpcCalls?.find(x => x.args?.p_code !== 'CRG-ABC1234')?.args?.p_code || '');
+  expect(renewed).toMatch(/^CRG-[A-HJ-NP-Z2-9]{10}$/);
+  expect(renewed).not.toBe(legacyCode);
+
+  await hostB.close();
+});
+
+test('RPC validation errors are not treated as legacy-code collisions', async ({ page }) => {
+  await installFakeSupabase(page);
+  await generateSession(page, 8, 12);
+  const originalCode = await page.locator('#sessionCodeText').innerText();
+  await page.evaluate(() => { window.__crgForceRpcValidation = true; });
+  const result = await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
+  expect(result?.storageReady).toBeFalsy();
+  expect(result?.collision).not.toBeTruthy();
+  expect(await page.locator('#sessionCodeText').innerText()).toBe(originalCode);
+  expect(await page.evaluate(() => window.__crgRpcCalls?.slice(-1)?.[0]?.args?.p_code)).toMatch(/^CRG-[A-Z0-9]+$/);
+});
+
+test('Live publish falls back to direct write only when publish_session is missing', async ({ page }) => {
+  await installFakeSupabase(page);
+  await generateSession(page, 8, 12);
+  await page.evaluate(() => { window.__crgFailPublishRpc = true; });
+  const result = await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
+  expect(result?.storageReady).toBeTruthy();
+  expect(await page.evaluate(() => window.__crgDirectWrites || 0)).toBeGreaterThan(0);
+});
+
 
 test('Ranks Share Results works before results and stays live after standings change', async ({ page, context }) => {
   await installFakeSupabase(page);
