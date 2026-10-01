@@ -480,44 +480,71 @@ test('Unconfigured runtime Supabase disables live sync without publishing anywhe
   await expect(page.locator('#crgToast')).toContainText('Live sync unavailable', { timeout: 1000 });
 });
 
-test('Transient publish failures use exponential jitter and pause while the tab is hidden', async ({ page }) => {
+test('Transient publish failures use exponential jitter and pause while hidden or offline', async ({ page }) => {
   await installFakeSupabase(page);
   await generateSession(page, 8, 12);
+  await page.waitForTimeout(500);
 
-  await page.evaluate(() => {
-    window.__crgRetryDelays = [];
+  const result = await page.evaluate(async () => {
     const originalSetTimeout = window.setTimeout;
-    window.__crgRestoreSetTimeout = () => { window.setTimeout = originalSetTimeout; };
+    const retryTimers = [];
+    window.__crgRetryDelays = [];
+    window.__crgRetryCallbacks = [];
     window.setTimeout = (fn, delay, ...args) => {
       if (Number(delay) >= 250) {
         window.__crgRetryDelays.push(Number(delay));
+        if (Number(delay) !== 7000) retryTimers.push(() => fn(...args));
         return 987654;
       }
       return originalSetTimeout(fn, delay, ...args);
     };
+    window.__crgRetryCallbacks = retryTimers;
+    window.__crgRestoreSetTimeout = () => { window.setTimeout = originalSetTimeout; };
+
     Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
     window.__crgForceRpcError = 'Transient failure';
-  });
-
-  await page.evaluate(async () => {
     window.__crgRpcCalls = [];
-    await window.CRG_PUBLISH_LIVE?.();
-  });
-  const retryDelays = await page.evaluate(() => (window.__crgRetryDelays || []).filter(delay => delay !== 7000));
-  const firstDelay = retryDelays[0] || 0;
-  expect(firstDelay).toBeGreaterThanOrEqual(800);
-  expect(firstDelay).toBeLessThanOrEqual(1200);
-  expect(retryDelays).toHaveLength(1);
 
-  await page.evaluate(async () => {
     await window.CRG_PUBLISH_LIVE?.();
-  });
-  const delays = await page.evaluate(() => (window.__crgRetryDelays || []).filter(delay => delay !== 7000));
-  expect(delays).toHaveLength(2);
-  expect(delays[1]).toBeGreaterThan(delays[0]);
-  expect(delays[1]).toBeGreaterThanOrEqual(1600);
-  expect(delays[1]).toBeLessThanOrEqual(2400);
+    const firstDelay = window.__crgRetryDelays[0] || 0;
+    const callsBeforeHiddenTimer = window.__crgRpcCalls.length;
 
+    const hiddenTimer = retryTimers.shift();
+    hiddenTimer?.();
+    await Promise.resolve();
+
+    const callsAfterHiddenTimer = window.__crgRpcCalls.length;
+    const waitingAfterHidden = window.__crgPublishRetryWaiting;
+
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+    document.dispatchEvent(new Event('visibilitychange'));
+    await Promise.resolve();
+    const callsWhileOffline = window.__crgRpcCalls.length;
+
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+    window.dispatchEvent(new Event('online'));
+    await Promise.resolve();
+
+    return {
+      firstDelay,
+      callsBeforeHiddenTimer,
+      callsAfterHiddenTimer,
+      waitingAfterHidden,
+      callsWhileOffline,
+      callsAfterOnline: window.__crgRpcCalls.length,
+      retryDelays: window.__crgRetryDelays,
+    };
+  });
+
+  expect(result.firstDelay).toBeGreaterThanOrEqual(800);
+  expect(result.firstDelay).toBeLessThanOrEqual(1200);
+  expect(result.callsBeforeHiddenTimer).toBe(1);
+  expect(result.callsAfterHiddenTimer).toBe(1);
+  expect(result.waitingAfterHidden).toBeTruthy();
+  expect(result.callsWhileOffline).toBe(1);
+  expect(result.callsAfterOnline).toBe(2);
   await page.evaluate(() => window.__crgRestoreSetTimeout?.());
 });
 
