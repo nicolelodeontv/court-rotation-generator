@@ -77,6 +77,9 @@ async function installFakeSupabase(page, options = {}) {
                     columns: chain._columns,
                     sessionCodeHeader: String(requestHeaders['x-crg-session-code'] || ''),
                   });
+                  if (chain._columns !== 'session_code,payload,updated_at,expires_at') {
+                    return { data: null, error: { code: '42501', message: 'permission denied' } };
+                  }
                   if (String(requestHeaders['x-crg-session-code'] || '') !== chain._code) {
                     return { data: null, error: { code: '42501', message: 'permission denied' } };
                   }
@@ -138,6 +141,11 @@ async function installFakeSupabase(page, options = {}) {
 
               const sessions = readSessions();
               const existing = sessions[code];
+              if (!existing && Object.keys(sessions).length >= 2000) {
+                const error = { code: 'P0001', message: errors.CAPACITY_REACHED };
+                window.__crgRpcErrors.push(error);
+                return { data: null, error };
+              }
               const rawHash = await hashHostKey(hostKey);
               if (existing && (existing.hostKeyHash !== rawHash || Date.parse(existing.expiresAt) <= Date.now())) {
                 const error = { code: 'P0001', message: errors.INVALID_HOST_KEY_OR_EXPIRED };
@@ -342,6 +350,24 @@ test('Restored legacy session code is regenerated before secure RPC publish', as
     return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
   }, call?.args?.p_host_key);
   expect(storedHash).toBe(expectedHash);
+});
+
+test('Spectator and table reads cannot request the hidden host key column', async ({ page }) => {
+  await installFakeSupabase(page);
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+
+  const result = await page.evaluate(async () => {
+    const sb = window.supabase.createClient('https://fake.supabase.test', 'fake-key', {
+      global: { headers: { 'x-crg-session-code': 'CRG-ABCDEFGHJK' } },
+    });
+    const hidden = await sb.from('court_rotation_sessions').select('host_key').eq('session_code', 'CRG-ABCDEFGHJK').maybeSingle();
+    const wildcard = await sb.from('court_rotation_sessions').select('*').eq('session_code', 'CRG-ABCDEFGHJK').maybeSingle();
+    return { hidden: hidden.error, wildcard: wildcard.error };
+  });
+
+  expect(result.hidden?.code).toBe('42501');
+  expect(result.wildcard?.code).toBe('42501');
 });
 
 test('Secure publish updates an existing session when the raw host key matches', async ({ page }) => {
