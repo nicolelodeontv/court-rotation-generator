@@ -59,7 +59,7 @@ test('Feature 26 shows four upcoming games and keeps total remaining count accur
 
   await expect(page.locator('#upNextList .next-item')).toHaveCount(4);
   await assertUpNextPlayerNamesVisible(page);
-  await expect(page.locator('#upNextList .next-item > span:first-child').allTextContents()).resolves.toEqual([
+  await expect(page.locator('#upNextList .next-item > .upnext-game-no').allTextContents()).resolves.toEqual([
     'Game 2', 'Game 3', 'Game 4', 'Game 5'
   ]);
   await expect(page.locator('#remaining')).toHaveText('14 remaining');
@@ -84,7 +84,7 @@ test('Feature 26 shows four upcoming games and keeps total remaining count accur
   await expect(page.locator('#currentNo')).toHaveText('GAME 2');
   await expect(page.locator('#upNextList .next-item')).toHaveCount(4);
   await assertUpNextPlayerNamesVisible(page);
-  await expect(page.locator('#upNextList .next-item > span:first-child').allTextContents()).resolves.toEqual([
+  await expect(page.locator('#upNextList .next-item > .upnext-game-no').allTextContents()).resolves.toEqual([
     'Game 3', 'Game 4', 'Game 5', 'Game 6'
   ]);
   await expect(page.locator('#remaining')).toHaveText('13 remaining');

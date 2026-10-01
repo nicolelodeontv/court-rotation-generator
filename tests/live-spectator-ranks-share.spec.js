@@ -240,7 +240,7 @@ async function currentNames(page) {
   );
 }
 
-test('Up Next keeps four visible cards on a uniform 8px outer/inter-card rhythm', async ({ page }) => {
+test('Up Next grid row spacing matches the two-column layout', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await generateSession(page, 8, 12);
 
@@ -255,7 +255,12 @@ test('Up Next keeps four visible cards on a uniform 8px outer/inter-card rhythm'
       count: cards.length,
       labels: cards.map(card => card.querySelector('.upnext-game-no')?.textContent || ''),
       topGap: rects[0] && headerRect ? rects[0].top - headerRect.bottom : -1,
-      interGaps: rects.slice(1).map((rect, i) => rect.top - rects[i].bottom),
+      rowGaps: (() => {
+        const rows = [...new Map(
+          rects.map(rect => [Math.round(rect.top), rect])
+        ).values()].sort((a,b) => a.top - b.top);
+        return rows.slice(1).map((rect, i) => rect.top - rows[i].bottom);
+      })(),
       bottomGap: rects.at(-1) && panelRect ? panelRect.bottom - rects.at(-1).bottom : -1,
       inlineHeight: panel?.style.getPropertyValue('--upnext-panel-height') || '',
       panelHeight: panelRect?.height || 0,
@@ -267,7 +272,8 @@ test('Up Next keeps four visible cards on a uniform 8px outer/inter-card rhythm'
   expect(metrics.labels).toEqual(['Game 2', 'Game 3', 'Game 4', 'Game 5']);
   expect(metrics.inlineHeight).toBe('');
   expect(Math.abs(metrics.topGap - 8)).toBeLessThanOrEqual(1);
-  expect(metrics.interGaps.every(gap => Math.abs(gap - 8) <= 1)).toBeTruthy();
+  expect(metrics.rowGaps.length).toBe(1);
+  expect(Math.abs(metrics.rowGaps[0] - 10)).toBeLessThanOrEqual(1);
   expect(Math.abs(metrics.bottomGap - 8)).toBeLessThanOrEqual(1);
   expect(Math.abs(metrics.panelHeight - metrics.scrollHeight)).toBeLessThanOrEqual(2);
 });

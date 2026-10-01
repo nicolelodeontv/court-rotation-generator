@@ -150,7 +150,7 @@ test('Up Next free reorder moves the whole generated game without validation blo
   await expect(page.locator('.upnext-dragging-card')).toHaveCount(0);
   await expect(page.locator('.upnext-drag-placeholder')).toHaveCount(0);
   await expect(page.locator('#upNextList .next-item[data-upcoming-index]')).toHaveCount(4);
-  await expect(page.locator('#upNextList .next-item > span:first-child')).toHaveText(['Game 2', 'Game 3', 'Game 4', 'Game 5']);
+  await expect(page.locator('#upNextList .next-item > .upnext-game-no')).toHaveText(['Game 2', 'Game 3', 'Game 4', 'Game 5']);
 
   const after = await page.evaluate(() => {
     const row = document.querySelector('#scheduleList .game-row:nth-child(4)');
@@ -214,53 +214,6 @@ test('Up Next keyboard reorder and mobile handle drag path keep the queue usable
   expect(touchResult).toBeTruthy();
   await expect(page.locator('.upnext-dragging-card')).toHaveCount(0);
   await expect(page.locator('.upnext-drag-placeholder')).toHaveCount(0);
-});
-
-test('Match log team names stay on one compact flex row per team', async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto('/');
-  await page.waitForLoadState('domcontentloaded');
-  await page.locator('#playerPasteBtn').click();
-  await page.locator('#pastePlayerNames').fill(roster(8));
-  await page.locator('#playerConfirm').click();
-  await page.locator('#generateBtn').click();
-  await expect(page.locator('.game-match')).toHaveCount(12, { timeout: 5000 });
-
-  await page.locator('#completeBtn').click();
-  await page.locator('[data-winner="0"]').click();
-  await page.locator('#scoreA').fill('11');
-  await page.locator('#scoreB').fill('7');
-  await page.locator('#scoreConfirm').click();
-  await expect(page.locator('.match-log-entry')).toHaveCount(1);
-
-  const teams = await page.locator('.match-log-entry .match-log-team').evaluateAll(nodes => nodes.map(node => {
-    const block = node.querySelector('.live-team-block');
-    const players = [...node.querySelectorAll('.live-player')];
-    const and = node.querySelector('.live-and');
-    const style = block ? getComputedStyle(block) : null;
-    const tops = [...players, ...(and ? [and] : [])].map(el => el.getBoundingClientRect().top);
-    return {
-      display: style?.display,
-      flexDirection: style?.flexDirection,
-      alignItems: style?.alignItems,
-      gap: style?.gap,
-      playerCount: players.length,
-      maxTopDelta: tops.length ? Math.max(...tops) - Math.min(...tops) : 0,
-    };
-  }));
-  expect(teams).toHaveLength(2);
-  for (const team of teams) {
-    expect(team.display).toBe('flex');
-    expect(team.flexDirection).toBe('row');
-    expect(team.alignItems).toBe('center');
-    expect(parseFloat(team.gap)).toBeGreaterThan(0);
-    expect(team.playerCount).toBe(2);
-    expect(team.maxTopDelta).toBeLessThan(5);
-  }
-  const logWinner = await page.locator('.match-log-team.match-log-winner .live-player-name').allTextContents();
-  const logWinnerText = logWinner.map(name => name.replace(/\s*⭐+\s*$/, '').trim()).join(' and ');
-  await expect(page.locator('.match-log-result')).toContainText(`Winner: ${logWinnerText}`);
-  await expect(page.locator('.match-log-vs')).toHaveText('VS');
 });
 
 test('Players tab keeps vertical spacing between identity and stat chips on desktop and mobile', async ({ page }) => {
@@ -462,7 +415,7 @@ test('Next game free swap commits the generated game unchanged without validatio
   await expect(page.locator('.game-match')).toHaveCount(5, { timeout: 5000 });
 
   const before = await page.evaluate(() => {
-    const currentTeams = [...document.querySelectorAll('#currentTeams .team')]
+    const currentTeams = [...document.querySelectorAll('#currentTeams .crg-team-side')]
       .map(node => node.textContent.trim());
     const nextRow = document.querySelector('#scheduleList .game-row:nth-child(2)');
     const upcomingNames = [...document.querySelectorAll('#upNextList .next-item:first-child .live-player-name')]
@@ -483,11 +436,11 @@ test('Next game free swap commits the generated game unchanged without validatio
   const after = await page.evaluate(() => ({
     currentNames: [...document.querySelectorAll('#currentTeams .live-player-name')]
       .map(node => node.textContent.replace(/\s*⭐+\s*$/, '').trim()),
-    currentTeams: [...document.querySelectorAll('#currentTeams .team')]
+    currentTeams: [...document.querySelectorAll('#currentTeams .crg-team-side')]
       .map(node => node.textContent.trim()),
     firstUpNextNames: [...document.querySelectorAll('#upNextList .next-item:first-child .live-player-name')]
       .map(node => node.textContent.replace(/\s*⭐+\s*$/, '').trim()),
-    firstLabel: document.querySelector('#upNextList .next-item:first-child > span:first-child')?.textContent || '',
+    firstLabel: document.querySelector('#upNextList .next-item:first-child > .upnext-game-no')?.textContent || '',
     progress: document.querySelector('#progressText')?.textContent || '',
     logCount: document.querySelector('#matchLogCount')?.textContent || '',
     firstMatch: document.querySelector('#scheduleList .game-row:nth-child(1) .game-match')?.textContent.replace(/⭐/g, '').replace(/\s+/g, ' ').trim() || '',

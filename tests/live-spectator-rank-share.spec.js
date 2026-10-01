@@ -125,7 +125,7 @@ async function completeCurrentGame(page) {
   await page.locator('#scoreConfirm').click();
 }
 
-test('Up Next outer spacing is uniform and the panel hugs four cards', async ({ page }) => {
+test('Up Next outer and inter-card spacing match the two-column layout', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await generateSession(page, 8, 12);
 
@@ -152,14 +152,9 @@ test('Up Next outer spacing is uniform and the panel hugs four cards', async ({ 
   expect(metrics.count).toBe(4);
   expect(metrics.labels).toEqual(['Game 2', 'Game 3', 'Game 4', 'Game 5']);
   expect(metrics.customHeight).toBe('');
-  expect(metrics.firstGap).toBeGreaterThanOrEqual(7);
-  expect(metrics.firstGap).toBeLessThanOrEqual(9);
-  expect(metrics.interGap).toBeGreaterThanOrEqual(7);
-  expect(metrics.interGap).toBeLessThanOrEqual(9);
-  expect(metrics.bottomGap).toBeGreaterThanOrEqual(8);
-  expect(metrics.bottomGap).toBeLessThanOrEqual(10);
-  expect(Math.abs(metrics.firstGap - metrics.interGap)).toBeLessThanOrEqual(1);
-  expect(Math.abs(metrics.bottomGap - metrics.interGap)).toBeLessThanOrEqual(1);
+  expect(Math.abs(metrics.firstGap - 8)).toBeLessThanOrEqual(1);
+  expect(Math.abs(metrics.interGap - 10)).toBeLessThanOrEqual(1);
+  expect(Math.abs(metrics.bottomGap - 8)).toBeLessThanOrEqual(1);
   expect(Math.abs(metrics.panelHeight - metrics.panelScrollHeight)).toBeLessThanOrEqual(2);
 });
 
