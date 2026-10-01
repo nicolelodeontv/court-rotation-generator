@@ -327,6 +327,12 @@ test('Restored legacy session code is regenerated before secure RPC publish', as
   expect(call?.args?.p_code).toBe(regenerated);
   expect(call?.args?.p_host_key).toMatch(/^[0-9a-f]{64}$/);
   expect(call?.args?.p_host_key).not.toBe(legacyHostKey);
+  const storedHash = await page.evaluate(code => JSON.parse(localStorage.getItem('crg-fake-live-sessions-v2') || '{}')?.[code]?.hostKeyHash || '', regenerated);
+  const expectedHash = await page.evaluate(async key => {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key));
+    return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+  }, call?.args?.p_host_key);
+  expect(storedHash).toBe(expectedHash);
 });
 
 test('Secure publish updates an existing session when the raw host key matches', async ({ page }) => {
@@ -386,6 +392,7 @@ test('Secure publish renews once when the database rejects an ownership or expir
   expect(calls[1].args.p_code).not.toBe(originalCode);
   expect(calls[1].args.p_host_key).toMatch(/^[0-9a-f]{64}$/);
   expect(await page.evaluate(() => window.__crgDirectWrites || 0)).toBe(0);
+  await expect(page.locator('#crgToast')).toContainText('share the new live link', { timeout: 1000 });
 });
 
 test('Deployed RPC rejects legacy and short host-key inputs without client regeneration', async ({ page }) => {
@@ -441,6 +448,77 @@ test('Live publish never falls back to a direct table write when the RPC is unav
   expect(result?.storageReady).toBeFalsy();
   expect(await page.evaluate(() => window.__crgDirectWrites || 0)).toBe(0);
   await expect(page.locator('#crgToast')).toContainText('Live sync unavailable', { timeout: 1000 });
+});
+
+test('Live publish waits for runtime Supabase config before sending the first RPC', async ({ page }) => {
+  await installFakeSupabase(page, { delay: 1000 });
+  await generateSession(page, 8, 12);
+
+  await expect.poll(() => page.evaluate(() => window.__crgRpcCalls?.length || 0), { timeout: 400 }).toBe(0);
+  await expect.poll(() => page.evaluate(() => window.__crgRpcCalls?.filter(x => x.name === 'publish_session').length || 0), { timeout: 1800 }).toBeGreaterThan(0);
+});
+
+test('Unconfigured runtime Supabase disables live sync without publishing anywhere', async ({ page }) => {
+  await installFakeSupabase(page, {
+    delay: 50,
+    config: { configured: false, url: '', publishableKey: '', source: 'vercel-env' },
+  });
+  await generateSession(page, 8, 12);
+
+  await expect(page.locator('#copyLiveSpectatorBtn')).toHaveText('Live sync unavailable', { timeout: 1500 });
+  expect(await page.evaluate(() => window.__crgRpcCalls?.length || 0)).toBe(0);
+  await expect(page.locator('#crgToast')).toContainText('Live sync unavailable', { timeout: 1000 });
+});
+
+test('Transient publish failures use exponential jitter and pause while the tab is hidden', async ({ page }) => {
+  await installFakeSupabase(page);
+  await generateSession(page, 8, 12);
+
+  await page.evaluate(() => {
+    window.__crgRetryDelays = [];
+    const originalSetTimeout = window.setTimeout;
+    window.__crgRestoreSetTimeout = () => { window.setTimeout = originalSetTimeout; };
+    window.setTimeout = (fn, delay, ...args) => {
+      if (Number(delay) >= 250) {
+        window.__crgRetryDelays.push(Number(delay));
+        return 987654;
+      }
+      return originalSetTimeout(fn, delay, ...args);
+    };
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    window.__crgForceRpcError = 'Transient failure';
+  });
+
+  await page.evaluate(async () => {
+    window.__crgRpcCalls = [];
+    await window.CRG_PUBLISH_LIVE?.();
+  });
+  const firstDelay = await page.evaluate(() => window.__crgRetryDelays?.[0] || 0);
+  expect(firstDelay).toBeGreaterThanOrEqual(800);
+  expect(firstDelay).toBeLessThanOrEqual(1200);
+  expect(await page.evaluate(() => window.__crgRetryDelays?.length || 0)).toBe(1);
+
+  await page.evaluate(async () => {
+    await window.CRG_PUBLISH_LIVE?.();
+  });
+  const delays = await page.evaluate(() => window.__crgRetryDelays || []);
+  expect(delays).toHaveLength(2);
+  expect(delays[1]).toBeGreaterThan(delays[0]);
+  expect(delays[1]).toBeGreaterThanOrEqual(1600);
+  expect(delays[1]).toBeLessThanOrEqual(2400);
+
+  await page.evaluate(() => window.__crgRestoreSetTimeout?.());
+});
+
+test('Spectator shows Session ended for a missing or expired live session', async ({ page }) => {
+  await installFakeSupabase(page);
+  await page.goto('/?live=CRG-ABCDEFGHJK&view=spectator');
+  await page.waitForLoadState('domcontentloaded');
+
+  await expect(page.locator('.spectator-ended')).toBeVisible();
+  await expect(page.locator('.spectator-ended h1')).toHaveText('Session ended');
+  await expect(page.locator('.spectator-ended')).toContainText('no longer available');
+  expect(await page.evaluate(() => window.__crgSelectCalls?.at(-1)?.columns)).toBe('session_code,payload,updated_at,expires_at');
 });
 
 test('Ranks Share Results works before results and stays live after standings change', async ({ page, context }) => {
