@@ -34,7 +34,7 @@ async function generate(page, courts = 1) {
   await page.locator('#pastePlayerNames').fill(LONG_NAMES.join('\n'));
   await page.locator('#playerConfirm').click();
   await page.locator('#generateBtn').click();
-  await expect(page.locator('.game-match')).toHaveCount(5, { timeout: 5000 });
+  await expect(page.locator('.game-match')).toHaveCount(12, { timeout: 5000 });
   await expect(page.locator('#currentNo')).toHaveText('GAME 1', { timeout: 5000 });
 }
 
