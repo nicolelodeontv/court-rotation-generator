@@ -81,7 +81,7 @@ async function installFakeSupabase(page, options = {}) {
                     return { data: null, error: { code: '42501', message: 'permission denied' } };
                   }
                   if (String(requestHeaders['x-crg-session-code'] || '') !== chain._code) {
-                    return { data: null, error: { code: '42501', message: 'permission denied' } };
+                    return { data: null, error: null };
                   }
                   const row = readSessions()[chain._code];
                   if (!row || Date.parse(row.expiresAt) <= Date.now()) {
@@ -350,6 +350,36 @@ test('Restored legacy session code is regenerated before secure RPC publish', as
     return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
   }, call?.args?.p_host_key);
   expect(storedHash).toBe(expectedHash);
+});
+
+test('RLS returns no rows when the spectator session-code header is missing or wrong', async ({ page }) => {
+  await installFakeSupabase(page);
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+
+  const result = await page.evaluate(async () => {
+    const matching = window.supabase.createClient('https://fake.supabase.test', 'fake-key', {
+      global: { headers: { 'x-crg-session-code': 'CRG-ABCDEFGHJK' } },
+    });
+    const missing = window.supabase.createClient('https://fake.supabase.test', 'fake-key');
+    const wrong = window.supabase.createClient('https://fake.supabase.test', 'fake-key', {
+      global: { headers: { 'x-crg-session-code': 'CRG-ZZZZZZZZZZ' } },
+    });
+    await window.__crgSeedLivePayload('CRG-ABCDEFGHJK', { ok: true }, 'a'.repeat(64));
+    return {
+      matching: await matching.from('court_rotation_sessions').select('session_code,payload,updated_at,expires_at').eq('session_code', 'CRG-ABCDEFGHJK').maybeSingle(),
+      missing: await missing.from('court_rotation_sessions').select('session_code,payload,updated_at,expires_at').eq('session_code', 'CRG-ABCDEFGHJK').maybeSingle(),
+      wrong: await wrong.from('court_rotation_sessions').select('session_code,payload,updated_at,expires_at').eq('session_code', 'CRG-ABCDEFGHJK').maybeSingle(),
+    };
+  });
+
+  expect(result.matching.error).toBeNull();
+  expect(result.matching.data?.session_code).toBe('CRG-ABCDEFGHJK');
+  expect(result.matching.data?.payload).toEqual({ ok: true });
+  expect(result.missing.error).toBeNull();
+  expect(result.missing.data).toBeNull();
+  expect(result.wrong.error).toBeNull();
+  expect(result.wrong.data).toBeNull();
 });
 
 test('Spectator and table reads cannot request the hidden host key column', async ({ page }) => {
