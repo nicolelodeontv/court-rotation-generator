@@ -265,3 +265,32 @@ body.court-mode #liveView .live-main-column{height:100%;min-height:0;display:fle
 body.court-mode #liveView #courtCards{flex:1 1 auto;min-height:0;overflow:auto;align-content:start}
 body.court-mode #liveView .court-card{min-height:0}
 @media(max-width:700px){body.court-mode #liveView #courtCards{grid-template-columns:1fr;gap:8px}}
+
+
+/* Issue 38 follow-up: constrain Up Next player names so long names ellipsize instead of visually clipping. */
+#liveView .upnext-list .next-item .crg-team-matchup,
+#liveView .upnext-list .next-item .crg-team-side,
+#liveView .upnext-list .next-item .crg-team-block,
+#liveView .upnext-list .next-item .crg-team-player{
+  min-width:0!important;
+  max-width:100%!important;
+}
+#liveView .upnext-list .next-item .crg-team-matchup{
+  width:100%!important;
+}
+#liveView .upnext-list .next-item .crg-team-player{
+  width:100%!important;
+  overflow:hidden!important;
+}
+#liveView .upnext-list .next-item .crg-team-player-name{
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+  overflow-wrap:normal!important;
+  word-break:normal!important;
+  box-sizing:border-box!important;
+}
