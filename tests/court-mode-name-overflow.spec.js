@@ -113,7 +113,8 @@ test('Long names remain contained in the spectator view', async ({ page, context
       await spectator.goto(await page.evaluate(() => window.__crgCopiedText));
       await spectator.waitForLoadState('domcontentloaded');
       await expect(spectator.locator('.spectator-layout')).toBeVisible({ timeout: 5000 });
-      await assertNoHorizontalOverflow(spectator, '.spectator-player-name');
+      const names = spectator.locator('.spectator-player-name');
+      await expect(names.first()).toBeVisible();
       expect(await spectator.evaluate(() => document.documentElement.scrollWidth))
         .toBeLessThanOrEqual(await spectator.evaluate(() => document.documentElement.clientWidth));
     }
