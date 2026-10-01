@@ -1,2 +1,2 @@
-window.CRG_SUPABASE_CONFIG={url:'https://gdnpvvtfioiafezuxplk.supabase.co',publishableKey:'sb_publishable_uZuzd0DUavgsVF_rJuEb9Q_OW9hmjN8',source:'fallback'};
+window.CRG_SUPABASE_CONFIG={url:'',publishableKey:'',source:'unconfigured'};
 window.CRG_SUPABASE_CONFIG_READY=(async()=>{try{const r=await fetch('/api/live-config',{cache:'no-store',credentials:'omit'});if(r.ok){const d=await r.json();if(d?.configured&&d.url&&d.publishableKey){window.CRG_SUPABASE_CONFIG.url=String(d.url);window.CRG_SUPABASE_CONFIG.publishableKey=String(d.publishableKey);window.CRG_SUPABASE_CONFIG.source='vercel-env'}}}catch(e){console.warn('CRG runtime Supabase config:',e)}return window.CRG_SUPABASE_CONFIG})();
