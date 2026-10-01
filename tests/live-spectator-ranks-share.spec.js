@@ -59,11 +59,14 @@ async function installFakeSupabase(page, options = {}) {
     window.__crgSelectCalls = [];
     window.__crgClients = [];
 
+    let fakeClientSequence = 0;
     const fakeSupabase = {
       createClient: (_url, _key, options = {}) => {
           const requestHeaders = { ...(options?.global?.headers || {}) };
-          window.__crgClients.push({ headers: requestHeaders });
+          const clientId = ++fakeClientSequence;
+          window.__crgClients.push({ id: clientId, headers: requestHeaders });
           return {
+            __crgClientId: clientId,
             from: () => {
               const chain = {
                 _code: '',
@@ -103,7 +106,7 @@ async function installFakeSupabase(page, options = {}) {
               return chain;
             },
             async rpc(name, args) {
-              window.__crgRpcCalls.push({ name, args });
+              window.__crgRpcCalls.push({ name, args, clientId });
               if (name !== 'publish_session') {
                 return { data: null, error: { code: '42883', message: 'function does not exist' } };
               }
@@ -469,6 +472,166 @@ test('Secure publish renews once when the database rejects an ownership or expir
   expect(calls[1].args.p_host_key).toMatch(/^[0-9a-f]{64}$/);
   expect(await page.evaluate(() => window.__crgDirectWrites || 0)).toBe(0);
   await expect(page.locator('#crgToast')).toContainText('share the new live link', { timeout: 1000 });
+});
+
+test('Capacity reached. shows an unavailable error without regenerating or retrying', async ({ page }) => {
+  await installFakeSupabase(page);
+  await generateSession(page, 8, 12);
+  await page.waitForTimeout(400);
+
+  const original = await page.evaluate(() => ({
+    code: (document.querySelector('#sessionCodeText')?.textContent || '').match(/CRG-[A-Z0-9]+/)?.[0] || '',
+    hostKey: localStorage.getItem('crg-supabase-host-key-v1:' + ((document.querySelector('#sessionCodeText')?.textContent || '').match(/CRG-[A-Z0-9]+/)?.[0] || '')) || '',
+  }));
+
+  await page.evaluate(() => {
+    window.__crgRpcCalls = [];
+    window.__crgRpcErrors = [];
+    window.__crgForceRpcError = window.CRG_LIVE_SYNC_ERRORS.CAPACITY_REACHED;
+  });
+
+  const result = await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
+  expect(result?.storageReady).toBeFalsy();
+  await expect(page.locator('#crgToast')).toContainText('Live sync unavailable', { timeout: 1000 });
+  await page.waitForTimeout(650);
+
+  const after = await page.evaluate(code => ({
+    code: (document.querySelector('#sessionCodeText')?.textContent || '').match(/CRG-[A-Z0-9]+/)?.[0] || '',
+    hostKey: localStorage.getItem('crg-supabase-host-key-v1:' + code) || '',
+    rpcCalls: window.__crgRpcCalls?.filter(x => x.name === 'publish_session') || [],
+  }), original.code);
+
+  expect(after.code).toBe(original.code);
+  expect(after.hostKey).toBe(original.hostKey);
+  expect(after.rpcCalls).toHaveLength(1);
+
+  await page.evaluate(() => { window.__crgForceRpcError = ''; });
+});
+
+test('Payload too large. shows an error, preserves the code/key, and allows the same code to publish after shrinking', async ({ page }) => {
+  await installFakeSupabase(page);
+  await generateSession(page, 8, 12);
+  await page.waitForTimeout(400);
+
+  const original = await page.evaluate(() => ({
+    snapshot: window.CRG_GET_LIVE_SNAPSHOT?.(),
+    code: (document.querySelector('#sessionCodeText')?.textContent || '').match(/CRG-[A-Z0-9]+/)?.[0] || '',
+  }));
+  const originalKey = await page.evaluate(code => localStorage.getItem('crg-supabase-host-key-v1:' + code) || '', original.code);
+
+  await page.evaluate(snapshot => {
+    window.__crgRpcCalls = [];
+    window.__crgRpcErrors = [];
+    window.__crgForceRpcError = window.CRG_LIVE_SYNC_ERRORS.PAYLOAD_TOO_LARGE;
+    window.CRG_GET_LIVE_SNAPSHOT = () => ({ ...snapshot, oversizedProbe: 'x'.repeat(200001) });
+  }, original.snapshot);
+
+  const rejected = await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
+  expect(rejected?.storageReady).toBeFalsy();
+  await expect(page.locator('#crgToast')).toContainText('Live sync error · payload too large', { timeout: 1000 });
+  await page.waitForTimeout(300);
+
+  const rejectedState = await page.evaluate(code => ({
+    code: (document.querySelector('#sessionCodeText')?.textContent || '').match(/CRG-[A-Z0-9]+/)?.[0] || '',
+    key: localStorage.getItem('crg-supabase-host-key-v1:' + code) || '',
+    rpcCalls: window.__crgRpcCalls?.filter(x => x.name === 'publish_session') || [],
+  }), original.code);
+
+  expect(rejectedState.code).toBe(original.code);
+  expect(rejectedState.key).toBe(originalKey);
+  expect(rejectedState.rpcCalls).toHaveLength(1);
+
+  await page.evaluate(snapshot => {
+    window.__crgForceRpcError = '';
+    window.CRG_GET_LIVE_SNAPSHOT = () => snapshot;
+  }, original.snapshot);
+
+  const published = await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
+  expect(published?.storageReady).toBeTruthy();
+
+  const final = await page.evaluate(code => ({
+    code: (document.querySelector('#sessionCodeText')?.textContent || '').match(/CRG-[A-Z0-9]+/)?.[0] || '',
+    key: localStorage.getItem('crg-supabase-host-key-v1:' + code) || '',
+    session: JSON.parse(localStorage.getItem('crg-fake-live-sessions-v2') || '{}')?.[code],
+    rpcCalls: window.__crgRpcCalls?.filter(x => x.name === 'publish_session') || [],
+  }), original.code);
+
+  expect(final.code).toBe(original.code);
+  expect(final.key).toBe(originalKey);
+  expect(final.session).toBeTruthy();
+  expect(final.rpcCalls).toHaveLength(2);
+  expect(final.rpcCalls[0].args.p_code).toBe(original.code);
+  expect(final.rpcCalls[0].args.p_host_key).toBe(originalKey);
+  expect(final.rpcCalls[1].args.p_code).toBe(original.code);
+  expect(final.rpcCalls[1].args.p_host_key).toBe(originalKey);
+});
+
+test('Two sessions in one tab use distinct host clients, session headers, and raw keys', async ({ page }) => {
+  await installFakeSupabase(page);
+  await generateSession(page, 8, 12);
+  await page.waitForTimeout(400);
+
+  const sessionA = await page.evaluate(() => {
+    const code = (document.querySelector('#sessionCodeText')?.textContent || '').match(/CRG-[A-Z0-9]+/)?.[0] || '';
+    const hostKey = localStorage.getItem('crg-supabase-host-key-v1:' + code) || '';
+    return { code, hostKey };
+  });
+
+  await page.evaluate(() => {
+    window.__crgRpcCalls = [];
+    window.__crgClients = [];
+  });
+
+  const aResult = await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
+  expect(aResult?.storageReady).toBeTruthy();
+
+  await expect.poll(() => page.evaluate(() => window.__crgRpcCalls?.filter(x => x.name === 'publish_session').length || 0)).toBe(1);
+
+  const callA = await page.evaluate(() => window.__crgRpcCalls?.find(x => x.name === 'publish_session'));
+  expect(callA?.args?.p_code).toBe(sessionA.code);
+  expect(callA?.args?.p_host_key).toBe(sessionA.hostKey);
+
+  const sessionB = await page.evaluate(() => {
+    const oldCode = (document.querySelector('#sessionCodeText')?.textContent || '').match(/CRG-[A-Z0-9]+/)?.[0] || '';
+    const nextCode = window.CRG_RENEW_SESSION_CODE?.();
+    const hostKey = localStorage.getItem('crg-supabase-host-key-v1:' + nextCode) || '';
+    return { oldCode, code: nextCode, hostKey };
+  });
+
+  expect(sessionB.code).toMatch(/^CRG-[A-HJ-NP-Z2-9]{10}$/);
+  expect(sessionB.code).not.toBe(sessionA.code);
+  expect(sessionB.hostKey).toMatch(/^[0-9a-f]{64}$/);
+  expect(sessionB.hostKey).not.toBe(sessionA.hostKey);
+
+  await page.evaluate(() => {
+    window.__crgRpcCalls = [];
+    window.__crgClients = [];
+  });
+
+  await page.waitForTimeout(250);
+  const bResult = await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
+  expect(bResult?.storageReady).toBeTruthy();
+  await expect.poll(() => page.evaluate(() => window.__crgRpcCalls?.filter(x => x.name === 'publish_session').length || 0)).toBe(1);
+
+  const details = await page.evaluate(() => ({
+    calls: window.__crgRpcCalls?.filter(x => x.name === 'publish_session') || [],
+    clients: window.__crgClients || [],
+  }));
+
+  expect(details.calls).toHaveLength(1);
+  expect(details.calls[0].args.p_code).toBe(sessionB.code);
+  expect(details.calls[0].args.p_host_key).toBe(sessionB.hostKey);
+  const bClient = details.clients.find(client => client.id === details.calls[0].clientId);
+  expect(bClient).toBeTruthy();
+  expect(bClient.headers['x-crg-session-code']).toBe(sessionB.code);
+  expect(bClient.headers['x-crg-host-key']).toBeUndefined();
+
+  await page.evaluate(() => window.CRG_PUBLISH_LIVE?.());
+  const secondB = await page.evaluate(() => window.__crgRpcCalls?.filter(x => x.name === 'publish_session').at(-1));
+  expect(secondB.clientId).toBe(details.calls[0].clientId);
+  expect(secondB.args.p_code).toBe(sessionB.code);
+  expect(secondB.args.p_host_key).toBe(sessionB.hostKey);
+  expect(secondB.args.p_host_key).not.toBe(sessionA.hostKey);
 });
 
 test('Deployed RPC rejects legacy and short host-key inputs without client regeneration', async ({ page }) => {
