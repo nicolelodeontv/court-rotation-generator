@@ -10,18 +10,14 @@ test('live-sync script parses as valid browser JavaScript', () => {
   expect(() => new vm.Script(source, { filename: 'live-sync.js' })).not.toThrow();
 });
 
-async function installFakeSupabase(page) {
-  await page.addInitScript(() => {
+async function installFakeSupabase(page, options = {}) {
+  await page.addInitScript(({ delay = 0, config = { configured: true, url: 'https://fake.supabase.test', publishableKey: 'fake-key', source: 'test-fixture' } }) => {
     const originalFetch = window.fetch.bind(window);
     window.fetch = (input, init) => {
       const url = typeof input === 'string' ? input : input?.url || '';
       if (String(url).includes('/api/live-config')) {
-        return Promise.resolve(new Response(JSON.stringify({
-          configured: true,
-          url: 'https://fake.supabase.test',
-          publishableKey: 'fake-key',
-          source: 'test-fixture',
-        }), { status: 200, headers: { 'content-type': 'application/json' } }));
+        const response = new Response(JSON.stringify(config), { status: 200, headers: { 'content-type': 'application/json' } });
+        return delay ? new Promise(resolve => setTimeout(() => resolve(response), delay)) : Promise.resolve(response);
       }
       return originalFetch(input, init);
     };
@@ -30,12 +26,16 @@ async function installFakeSupabase(page) {
     const readSessions = () => {
       try { return JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { return {}; }
     };
-    const writeSession = (code, payload, hostKey = '', expiresAt = '') => {
+    const hashHostKey = async hostKey => {
+      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(hostKey || '')));
+      return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+    };
+    const writeSession = async (code, payload, hostKey = '', expiresAt = '') => {
       const sessions = readSessions();
       sessions[String(code)] = {
         session_code: String(code),
         payload,
-        hostKey: String(hostKey || ''),
+        hostKeyHash: await hashHostKey(hostKey),
         updatedAt: new Date().toISOString(),
         expiresAt: expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       };
@@ -99,47 +99,44 @@ async function installFakeSupabase(page) {
               if (window.__crgFailPublishRpc) {
                 return { data: null, error: { code: 'PGRST202', message: 'Could not find the function public.publish_session' } };
               }
-              if (window.__crgForceRpcError) {
-                const error = { code: 'P0001', message: String(window.__crgForceRpcError) };
-                window.__crgRpcErrors.push(error);
-                return { data: null, error };
-              }
 
+              const errors = window.CRG_LIVE_SYNC_ERRORS;
               const code = String(args?.p_code || '');
               const hostKey = String(args?.p_host_key || '');
               const payload = args?.p_payload;
 
               if (!/^CRG-[A-HJ-NP-Z2-9]{10}$/.test(code)) {
-                const error = { code: 'P0001', message: 'Invalid session code.' };
+                const error = { code: 'P0001', message: errors.INVALID_SESSION_CODE };
                 window.__crgRpcErrors.push(error);
                 return { data: null, error };
               }
               if (!hostKey || hostKey.length < 32) {
-                const error = { code: 'P0001', message: 'Invalid host key.' };
+                const error = { code: 'P0001', message: errors.INVALID_HOST_KEY };
                 window.__crgRpcErrors.push(error);
                 return { data: null, error };
               }
               if (payload == null) {
-                const error = { code: 'P0001', message: 'Payload is required.' };
+                const error = { code: 'P0001', message: errors.PAYLOAD_REQUIRED };
                 window.__crgRpcErrors.push(error);
                 return { data: null, error };
               }
               const payloadBytes = new TextEncoder().encode(JSON.stringify(payload)).byteLength;
               if (payloadBytes > 200000) {
-                const error = { code: 'P0001', message: 'Payload too large.' };
+                const error = { code: 'P0001', message: errors.PAYLOAD_TOO_LARGE };
                 window.__crgRpcErrors.push(error);
                 return { data: null, error };
               }
 
               const sessions = readSessions();
               const existing = sessions[code];
-              if (existing && (existing.hostKey !== hostKey || Date.parse(existing.expiresAt) <= Date.now())) {
-                const error = { code: 'P0001', message: 'Invalid host key or expired session.' };
+              const rawHash = await hashHostKey(hostKey);
+              if (existing && (existing.hostKeyHash !== rawHash || Date.parse(existing.expiresAt) <= Date.now())) {
+                const error = { code: 'P0001', message: errors.INVALID_HOST_KEY_OR_EXPIRED };
                 window.__crgRpcErrors.push(error);
                 return { data: null, error };
               }
 
-              writeSession(code, payload, hostKey, existing?.expiresAt || '');
+              await writeSession(code, payload, hostKey, existing?.expiresAt || '');
               return { data: true, error: null };
             },
             channel: topic => {
@@ -178,7 +175,7 @@ async function installFakeSupabase(page) {
         value: { writeText: async value => { window.__crgCopiedText = String(value); } },
       });
     } catch {}
-  });
+  }, options);
 }
 
 async function currentSessionCode(page) {
