@@ -34,7 +34,7 @@ async function generateSession(page, count = 5) {
   await expect(page.locator('#setupStatus')).toContainText('Rotation ready', { timeout: 8000 });
 }
 
-test('Live-sync failure shows a notice and provides a snapshot fallback', async ({ page }) => {
+test('Live-sync failure shows a notice and does not silently fall back to a snapshot', async ({ page }) => {
   await installClipboard(page);
   await failSupabaseClient(page);
   await generateSession(page, 5);
@@ -75,8 +75,8 @@ test('Live-sync failure shows a notice and provides a snapshot fallback', async 
 
   await page.locator('#copyLiveSpectatorBtn').click();
 
-  await expect.poll(() => page.evaluate(() => window.__crgCopiedText || ''), { timeout: 5000 })
-    .toMatch(/(?:\?|&)s=/);
+  await expect.poll(() => page.evaluate(() => window.__crgToastHistory || []), { timeout: 5000 })
+    .toEqual(expect.arrayContaining([expect.objectContaining({ text: expect.stringMatching(/live sync unavailable/i) })]));
 
   const result = await page.evaluate(() => {
     window.__crgToastObserver?.disconnect();
@@ -87,11 +87,9 @@ test('Live-sync failure shows a notice and provides a snapshot fallback', async 
     };
   });
 
-  expect(result.notices.some(n => /live (sync|storage) unavailable/i.test(n.text))).toBe(true);
-  expect(result.copied).toMatch(/(?:\?|&)s=/);
-  expect(result.copied).toContain('view=spectator');
-  expect(result.copied).not.toContain('live=');
-  expect(result.button).toBe('Copy read-only snapshot link');
+  expect(result.notices.some(n => /live sync unavailable/i.test(n.text))).toBe(true);
+  expect(result.copied).toBe('');
+  expect(result.button).toMatch(/Live sync unavailable|Copy live spectator link/);
 
   await page.locator('#addMidSessionPlayerBtn').click();
   await expect(page.locator('#midPlayerConfirm')).toBeVisible();
