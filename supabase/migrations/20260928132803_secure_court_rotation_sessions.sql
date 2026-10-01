@@ -3,6 +3,12 @@
 -- wochetemsnrysnjrgoed, migration 20260928132803_secure_court_rotation_sessions.
 --
 -- This migration records the database contract already deployed to production.
+-- The publish_session definition below preserves the later deployed
+-- pg_get_functiondef() output. The supabase_migrations.schema_migrations row
+-- for version 20260928132803 contains the earlier equivalent function text.
+-- The deployed definition is authoritative for this source record.
+-- Expired-session cleanup is recorded separately in the subsequent pg_cron
+-- migration, matching the cleanup job already present in production.
 
 create schema if not exists extensions;
 create extension if not exists pgcrypto with schema extensions;
