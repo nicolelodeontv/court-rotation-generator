@@ -543,39 +543,48 @@ test('Unconfigured runtime Supabase disables live sync without publishing anywhe
 
 test('Transient publish failures use exponential jitter and pause while hidden or offline', async ({ page }) => {
   await installFakeSupabase(page);
-  await generateSession(page, 8, 12);
-  await page.waitForTimeout(500);
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+  await page.waitForTimeout(350);
 
-  const result = await page.evaluate(async () => {
+  await page.evaluate(() => {
     const originalSetTimeout = window.setTimeout;
-    const retryTimers = [];
     window.__crgRetryDelays = [];
     window.__crgRetryCallbacks = [];
     window.setTimeout = (fn, delay, ...args) => {
       if (Number(delay) >= 250) {
         window.__crgRetryDelays.push(Number(delay));
-        if (Number(delay) !== 7000) retryTimers.push(() => fn(...args));
+        if (Number(delay) !== 7000) {
+          window.__crgRetryCallbacks.push(() => fn(...args));
+        }
         return 987654;
       }
       return originalSetTimeout(fn, delay, ...args);
     };
-    window.__crgRetryCallbacks = retryTimers;
     window.__crgRestoreSetTimeout = () => { window.setTimeout = originalSetTimeout; };
-
     Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
     Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
     window.__crgForceRpcError = 'Transient failure';
     window.__crgRpcCalls = [];
+  });
 
-    await window.CRG_PUBLISH_LIVE?.();
-    const firstDelay = window.__crgRetryDelays.filter(delay => delay !== 7000)[0] || 0;
+  await page.locator('#playerPasteBtn').click();
+  await page.locator('#pastePlayerNames').fill(roster(8));
+  await page.locator('#playerConfirm').click();
+  await expect(page.locator('#playerList .player-row')).toHaveCount(8, { timeout: 2500 });
+  await page.locator('#generateBtn').click();
+  await expect(page.locator('#setupStatus')).toContainText('Rotation ready', { timeout: 8000 });
+
+  await expect.poll(() => page.evaluate(() => (window.__crgRetryDelays || []).filter(delay => delay !== 7000)[0] || 0), { timeout: 3000 }).toBeGreaterThanOrEqual(800);
+  const result = await page.evaluate(async () => {
+    const retryDelays = (window.__crgRetryDelays || []).filter(delay => delay !== 7000);
+    const callbacks = window.__crgRetryCallbacks || [];
     const callsBeforeHiddenTimer = window.__crgRpcCalls.length;
 
-    const hiddenTimer = retryTimers.shift();
-    hiddenTimer?.();
+    callbacks.shift()?.();
     await Promise.resolve();
-
     const callsAfterHiddenTimer = window.__crgRpcCalls.length;
+
     Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
     Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
     document.dispatchEvent(new Event('visibilitychange'));
@@ -584,15 +593,15 @@ test('Transient publish failures use exponential jitter and pause while hidden o
 
     Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
     window.dispatchEvent(new Event('online'));
-    await Promise.resolve();
+    await new Promise(resolve => setTimeout(resolve, 0));
 
     return {
-      firstDelay,
+      firstDelay: retryDelays[0] || 0,
+      secondDelay: retryDelays[1] || 0,
       callsBeforeHiddenTimer,
       callsAfterHiddenTimer,
       callsWhileOffline,
       callsAfterOnline: window.__crgRpcCalls.length,
-      retryDelays: window.__crgRetryDelays,
     };
   });
 
