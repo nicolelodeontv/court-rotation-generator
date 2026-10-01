@@ -100,6 +100,7 @@ async function installFakeSupabase(page, options = {}) {
                   return { data: null, error: { code: '42501', message: 'permission denied' } };
                 },
               };
+              return chain;
             },
             async rpc(name, args) {
               window.__crgRpcCalls.push({ name, args });
