@@ -261,6 +261,10 @@ test('Live spectator link shows current game details and updates after a complet
   expect(await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('crg-fake-live-sessions-v2') || '{}')).length)).toBeGreaterThan(0);
 
   const spectator = await context.newPage();
+  const sharedSessions = await page.evaluate(() => localStorage.getItem('crg-fake-live-sessions-v2') || '{}');
+  await spectator.addInitScript(storage => {
+    localStorage.setItem('crg-fake-live-sessions-v2', storage);
+  }, sharedSessions);
   await installFakeSupabase(spectator);
   await spectator.goto(liveUrl);
   await spectator.waitForLoadState('domcontentloaded');
