@@ -262,10 +262,11 @@ test('Live spectator link shows current game details and updates after a complet
 
   const spectator = await context.newPage();
   const sharedSessions = await page.evaluate(() => localStorage.getItem('crg-fake-live-sessions-v2') || '{}');
-  await spectator.addInitScript(storage => {
+  await installFakeSupabase(spectator);
+  await spectator.goto('/');
+  await spectator.evaluate(storage => {
     localStorage.setItem('crg-fake-live-sessions-v2', storage);
   }, sharedSessions);
-  await installFakeSupabase(spectator);
   await spectator.goto(liveUrl);
   await spectator.waitForLoadState('domcontentloaded');
 
@@ -336,18 +337,26 @@ test('Secure publish updates an existing session when the raw host key matches',
   await generateSession(page, 8, 12);
   const code = await currentSessionCode(page);
 
-  await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
+  const firstResult = await page.evaluate(async () => {
+    window.__crgRpcCalls = [];
+    return window.CRG_PUBLISH_LIVE?.();
+  });
+  expect(firstResult?.storageReady).toBeTruthy();
   const first = await page.evaluate(c => JSON.parse(localStorage.getItem(c) || '{}'), 'crg-fake-live-sessions-v2');
   const firstUpdated = first?.[code]?.updatedAt;
+  expect(await page.evaluate(() => window.__crgRpcCalls?.filter(x => x.name === 'publish_session').length || 0)).toBe(1);
 
   await page.waitForTimeout(25);
-  const second = await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
+  const second = await page.evaluate(async () => {
+    window.__crgRpcCalls = [];
+    return window.CRG_PUBLISH_LIVE?.();
+  });
   expect(second?.storageReady).toBeTruthy();
 
   const updated = await page.evaluate(c => JSON.parse(localStorage.getItem(c) || '{}'), 'crg-fake-live-sessions-v2');
   expect(updated?.[code]?.updatedAt).not.toBe(firstUpdated);
   expect(await page.evaluate(() => window.__crgDirectWrites || 0)).toBe(0);
-  expect(await page.evaluate(() => window.__crgRpcCalls?.filter(x => x.name === 'publish_session').length || 0)).toBe(2);
+  expect(await page.evaluate(() => window.__crgRpcCalls?.filter(x => x.name === 'publish_session').length || 0)).toBe(1);
 });
 
 test('Secure publish renews once when the database rejects an ownership or expiry match', async ({ page }) => {
@@ -366,7 +375,10 @@ test('Secure publish renews once when the database rejects an ownership or expir
     localStorage.setItem('crg-supabase-host-key-v1:' + originalCode, 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
   }, { originalCode, existingHostKey });
 
-  const result = await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
+  const result = await page.evaluate(async () => {
+    window.__crgRpcCalls = [];
+    return window.CRG_PUBLISH_LIVE?.();
+  });
   expect(result?.storageReady).toBeTruthy();
 
   const calls = await page.evaluate(() => window.__crgRpcCalls?.filter(x => x.name === 'publish_session') || []);
@@ -450,7 +462,12 @@ test('Ranks Share Results works before results and stays live after standings ch
   expect(noResultsUrl).toContain('view=live-leaderboard');
 
   const shared = await context.newPage();
+  const sharedSessions = await page.evaluate(() => localStorage.getItem('crg-fake-live-sessions-v2') || '{}');
   await installFakeSupabase(shared);
+  await shared.goto('/');
+  await shared.evaluate(storage => {
+    localStorage.setItem('crg-fake-live-sessions-v2', storage);
+  }, sharedSessions);
   await shared.goto(noResultsUrl);
   await shared.waitForLoadState('domcontentloaded');
   await expect(shared.locator('.live-leaderboard-page')).toBeVisible();
