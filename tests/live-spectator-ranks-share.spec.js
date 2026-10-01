@@ -470,7 +470,7 @@ test('Deployed RPC rejects legacy and short host-key inputs without client regen
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
   const results = await page.evaluate(async () => {
-    const sb = window.supabase.createClient('https://fake.supabase.test', 'fake-key');
+    const sb = window.__crgFakeSupabase.createClient('https://fake.supabase.test', 'fake-key');
     const legacy = await sb.rpc('publish_session', {
       p_code: 'CRG-ABC1234',
       p_host_key: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
@@ -494,7 +494,7 @@ test('Ownership mismatch and expired sessions return the same generic RPC error'
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
   const result = await page.evaluate(async () => {
-    const sb = window.supabase.createClient('https://fake.supabase.test', 'fake-key');
+    const sb = window.__crgFakeSupabase.createClient('https://fake.supabase.test', 'fake-key');
     const code = 'CRG-ABCDEFGHJK';
     const keyA = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
     const keyB = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
