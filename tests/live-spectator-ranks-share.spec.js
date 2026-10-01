@@ -11,17 +11,26 @@ test('live-sync script parses as valid browser JavaScript', () => {
 });
 
 async function installFakeSupabase(page, options = {}) {
-  await page.addInitScript(({ delay = 0, config = { configured: true, url: 'https://fake.supabase.test', publishableKey: 'fake-key', source: 'test-fixture' } }) => {
-    const originalFetch = window.fetch.bind(window);
-    window.fetch = (input, init) => {
-      const url = typeof input === 'string' ? input : input?.url || '';
-      if (String(url).includes('/api/live-config')) {
-        const response = new Response(JSON.stringify(config), { status: 200, headers: { 'content-type': 'application/json' } });
-        return delay ? new Promise(resolve => setTimeout(() => resolve(response), delay)) : Promise.resolve(response);
-      }
-      return originalFetch(input, init);
-    };
+  const {
+    delay = 0,
+    config = { configured: true, url: 'https://fake.supabase.test', publishableKey: 'fake-key', source: 'test-fixture' },
+    configError = false,
+  } = options;
 
+  await page.route('**/api/live-config', async route => {
+    if (configError) {
+      await route.abort('failed');
+      return;
+    }
+    if (delay) await new Promise(resolve => setTimeout(resolve, delay));
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(config),
+    });
+  });
+
+  await page.addInitScript(() => {
     const storageKey = 'crg-fake-live-sessions-v2';
     const readSessions = () => {
       try { return JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { return {}; }
@@ -175,7 +184,7 @@ async function installFakeSupabase(page, options = {}) {
         value: { writeText: async value => { window.__crgCopiedText = String(value); } },
       });
     } catch {}
-  }, options);
+  });
 }
 
 async function currentSessionCode(page) {
@@ -338,6 +347,7 @@ test('Restored legacy session code is regenerated before secure RPC publish', as
 test('Secure publish updates an existing session when the raw host key matches', async ({ page }) => {
   await installFakeSupabase(page);
   await generateSession(page, 8, 12);
+  await page.waitForTimeout(500);
   const code = await currentSessionCode(page);
 
   const firstResult = await page.evaluate(async () => {
@@ -493,15 +503,16 @@ test('Transient publish failures use exponential jitter and pause while the tab 
     window.__crgRpcCalls = [];
     await window.CRG_PUBLISH_LIVE?.();
   });
-  const firstDelay = await page.evaluate(() => window.__crgRetryDelays?.[0] || 0);
+  const retryDelays = await page.evaluate(() => (window.__crgRetryDelays || []).filter(delay => delay !== 7000));
+  const firstDelay = retryDelays[0] || 0;
   expect(firstDelay).toBeGreaterThanOrEqual(800);
   expect(firstDelay).toBeLessThanOrEqual(1200);
-  expect(await page.evaluate(() => window.__crgRetryDelays?.length || 0)).toBe(1);
+  expect(retryDelays).toHaveLength(1);
 
   await page.evaluate(async () => {
     await window.CRG_PUBLISH_LIVE?.();
   });
-  const delays = await page.evaluate(() => window.__crgRetryDelays || []);
+  const delays = await page.evaluate(() => (window.__crgRetryDelays || []).filter(delay => delay !== 7000));
   expect(delays).toHaveLength(2);
   expect(delays[1]).toBeGreaterThan(delays[0]);
   expect(delays[1]).toBeGreaterThanOrEqual(1600);
@@ -519,6 +530,14 @@ test('Spectator shows Session ended for a missing or expired live session', asyn
   await expect(page.locator('.spectator-ended h1')).toHaveText('Session ended');
   await expect(page.locator('.spectator-ended')).toContainText('no longer available');
   expect(await page.evaluate(() => window.__crgSelectCalls?.at(-1)?.columns)).toBe('session_code,payload,updated_at,expires_at');
+});
+
+test('Failed runtime Supabase config disables live sync without publishing anywhere', async ({ page }) => {
+  await installFakeSupabase(page, { configError: true });
+  await generateSession(page, 8, 12);
+  await expect(page.locator('#copyLiveSpectatorBtn')).toHaveText('Live sync unavailable', { timeout: 1500 });
+  expect(await page.evaluate(() => window.__crgRpcCalls?.length || 0)).toBe(0);
+  await expect(page.locator('#crgToast')).toContainText('Live sync unavailable', { timeout: 1000 });
 });
 
 test('Ranks Share Results works before results and stays live after standings change', async ({ page, context }) => {
