@@ -110,6 +110,11 @@ async function installFakeSupabase(page, options = {}) {
               if (window.__crgFailPublishRpc) {
                 return { data: null, error: { code: 'PGRST202', message: 'Could not find the function public.publish_session' } };
               }
+              if (window.__crgForceRpcError) {
+                const error = { code: 'P0001', message: String(window.__crgForceRpcError) };
+                window.__crgRpcErrors.push(error);
+                return { data: null, error };
+              }
 
               const errors = window.CRG_LIVE_SYNC_ERRORS;
               const code = String(args?.p_code || '');
