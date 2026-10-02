@@ -126,7 +126,68 @@ function scheduleSkillScore(id){return SCHEDULE_SKILL_SCORES[liveSkill(id)]||3}
 function renderSchedule(){if(!state.games.length){e.schedule.innerHTML='<div class="empty">Generate a rotation to see the schedule.</div>';return}e.schedule.innerHTML=state.games.map((g,i)=>{const a=g.teams[0],bb=g.teams[1],done=state.done.has(i),locked=state.locked.has(i),r=state.results[i],aScore=a.reduce((sum,id)=>sum+scheduleSkillScore(id),0),bScore=bb.reduce((sum,id)=>sum+scheduleSkillScore(id),0),td=t=>t.map(id=>({name:nm(id),skill:liveSkill(id)}));return`<article class="game-row ${done?'done':''} ${locked?'locked':''}"><div class="game-label">Game ${i+1}</div><div><div class="game-match"><div class="schedule-team-label-row"><span class="game-team-label">TEAM A (${aScore}★)</span><span class="game-team-label">TEAM B (${bScore}★)</span></div>${window.CRG_TEAM_RENDERER.renderMatchup([td(a),td(bb)],{variant:'schedule',className:'schedule-matchup'})}</div><div class="hint">Court ${g.court||1} · Sitting: ${(g.sitting||[]).length?(g.sitting||[]).map(nm).map(esc).join(', '):'None'}</div></div><div><div class="game-status">${r===0||r===1?esc(resultSummaryText(i)):done?'Completed':locked?'Locked':g.restException?'⚠ Rest exception':'Upcoming'}</div><div class="game-actions"><button class="icon-btn" data-result="${i}">${done?'↩ Result':'✓ Result'}</button><button class="icon-btn ${locked?'active':''}" data-lock="${i}">${locked?'🔓 Unlock':'🔒 Lock'}</button></div></div></article>`}).join('');e.schedule.querySelectorAll('[data-result]').forEach(btn=>btn.addEventListener('click',()=>chooseWinner(Number(btn.dataset.result))));e.schedule.querySelectorAll('[data-lock]').forEach(btn=>btn.addEventListener('click',()=>{const i=Number(btn.dataset.lock);state.locked.has(i)?state.locked.delete(i):state.locked.add(i);render()}))}
 function metrics(){const m={};for(let i=1;i<=state.names.length;i++)m[i]={games:0,sits:0,wins:0,losses:0,partners:new Set(),opponents:new Set()};state.games.forEach(g=>{const[a,b]=g.teams;[...a,...b].forEach(p=>m[p]&&m[p].games++);(g.sitting||[]).forEach(p=>m[p]&&m[p].sits++);a.forEach(p=>b.forEach(q=>{m[p]?.opponents.add(nm(q));m[q]?.opponents.add(nm(p))}));[a,b].forEach(t=>t.forEach(p=>t.forEach(q=>{if(p!==q)m[p]?.partners.add(nm(q))})))});Object.entries(state.results).forEach(([k,r])=>{const g=state.games[Number(k)];if(!g)return;g.teams[r].forEach(p=>m[p].wins++);g.teams[1-r].forEach(p=>m[p].losses++)});return m}
 function getRankingRows(){const m=metrics();return state.names.map((name,i)=>{const x=m[i+1],gp=x.wins+x.losses;return{name,w:x.wins,l:x.losses,g:gp,pct:gp?Math.round(x.wins/gp*100):0}}).sort((a,b)=>b.w-a.w||b.pct-a.pct||b.g-a.g||a.name.localeCompare(b.name))}
-function liveSnapshotPayload(){const nameFor=id=>nm(id),playerPayload=id=>({name:nameFor(id),skill:liveSkill(id)}),teamsPayload=g=>(g?.teams||[]).map(team=>team.map(playerPayload)),resultPayload=i=>{const g=state.games[i],winner=state.results?.[i];if(!g||!(winner===0||winner===1))return null;const raw=state.scores?.[i],a=Number(raw?.a),b=Number(raw?.b),score=Number.isFinite(a)&&Number.isFinite(b)?{a,b}:null,duration=Number(state.gameDurations?.[i]);return{winner,winnerNames:g.teams[winner].map(nameFor),durationSeconds:Number.isFinite(duration)?Math.max(0,Math.floor(duration)):null,score,summary:resultSummaryText(i)}};const i=liveIndex(),total=state.games.length,game=i<total?state.games[i]:null,ranking=getRankingRows(),position=ranking.map((r,n)=>({position:r.g?n+1:null,...r}));return{version:7,sessionCode:state.sessionCode,season:localStorage.getItem('crg-season-name')||'Court Rotation',current:{game:i<total?'GAME '+(i+1):'✓ SESSION COMPLETE',index:i,court:game?.court||null,teams:teamsPayload(game),sitting:game?multiCourtSittingOutForIndex(i).map(nameFor):[],status:i<total?'NEXT UP':'COMPLETE',timerSeconds:game?elapsedForGame(i):0,timerRunning:!!game&&!Number.isFinite(Number(state.gameDurations?.[i]))&&!state.gameTimerPaused,timerStartedAt:game&&!Number.isFinite(Number(state.gameDurations?.[i]))&&!state.gameTimerPaused?state.gameStartedAtByIndex?.[i]:null},progress:{completed:state.done.size,total,percent:total?Math.round(state.done.size/total*100):100},schedule:state.games.map((g,n)=>({index:n+1,teams:teamsPayload(g),court:g.court||1,status:state.done.has(n)?(resultPayload(n)?.summary||'Completed'):'Upcoming',done:state.done.has(n),locked:state.locked.has(n),result:resultPayload(n)})),upNext:state.games.slice(i+1,i+5).map((g,n)=>({index:i+2+n,teams:teamsPayload(g)})),matchLog:[...state.done].sort((a,b)=>a-b).map(n=>({index:n+1,teams:teamsPayload(state.games[n]),court:state.games[n]?.court||1,result:resultPayload(n)})),rankings:position.map(r=>({position:r.position,name:r.name,w:r.w,l:r.l,g:r.g,winRate:r.g?Math.round(r.w/r.g*100)+'%':'—'})),updatedAt:new Date().toISOString()}}
+function liveSnapshotPayload(){
+const nameFor=id=>nm(id);
+const playerPayload=id=>({name:nameFor(id),skill:liveSkill(id)});
+const teamsPayload=g=>(g?.teams||[]).map(team=>team.map(playerPayload));
+const resultPayload=i=>{
+ const g=state.games[i],winner=state.results?.[i];
+ if(!g||!(winner===0||winner===1))return null;
+ const raw=state.scores?.[i],a=Number(raw?.a),b=Number(raw?.b);
+ const score=Number.isFinite(a)&&Number.isFinite(b)?{a,b}:null;
+ const duration=Number(state.gameDurations?.[i]);
+ return{winner,winnerNames:g.teams[winner].map(nameFor),durationSeconds:Number.isFinite(duration)?Math.max(0,Math.floor(duration)):null,score,summary:resultSummaryText(i)}
+};
+const courts=sessionCourts().map(court=>{
+ const index=currentGameForCourt(court);
+ if(index<0)return{court,index:-1,gameNo:null,teams:[],sitting:[],status:'complete',waitingFor:null,timerSeconds:0,timerRunning:false,timerStartedAt:null};
+ const g=state.games[index];
+ const waiting=state.waitingCourts?.[court]?.gameIndex===index&&!gameHasStarted(index);
+ const entry=state.waitingCourts?.[court];
+ const timerRunning=gameHasStarted(index)&&!Number.isFinite(Number(state.gameDurations?.[index]))&&!(state.gameTimerPaused&&state.timerPausedIndex===index);
+ return{
+  court,index,gameNo:index+1,teams:teamsPayload(g),sitting:multiCourtSittingOutForIndex(index).map(nameFor),
+  status:gameHasStarted(index)?'playing':'waiting',
+  waitingFor:waiting&&entry?{player:nameFor(entry.player),court:Number(entry.blockingCourt||1),game:index+1}:null,
+  timerSeconds:elapsedForGame(index),
+  timerRunning,
+  timerStartedAt:timerRunning?state.gameStartedAtByIndex?.[index]:null
+ };
+});
+const i=liveIndex(),total=state.games.length,game=i<total?state.games[i]:null;
+const ranking=getRankingRows(),position=ranking.map((r,n)=>({position:r.g?n+1:null,...r}));
+const multiCourt=courts.length>1;
+const activeGameNos=new Set(courts.map(c=>Number(c.gameNo)).filter(Number.isFinite));
+const upNext=multiCourt
+ ? state.games.filter((g,n)=>!state.done.has(n)&&!activeGameNos.has(n+1)).slice(0,4).map((g,n)=>{
+     const index=state.games.indexOf(g);
+     return{index:index+1,teams:teamsPayload(g)};
+   })
+ : state.games.slice(i+1,i+5).map((g,n)=>({index:i+2+n,teams:teamsPayload(g)}));
+return{
+ version:8,
+ sessionCode:state.sessionCode,
+ season:localStorage.getItem('crg-season-name')||'Court Rotation',
+ current:{
+  game:i<total?'GAME '+(i+1):'✓ SESSION COMPLETE',
+  index:i,
+  court:game?.court||null,
+  teams:teamsPayload(game),
+  sitting:game?multiCourtSittingOutForIndex(i).map(nameFor):[],
+  status:i<total?'NEXT UP':'COMPLETE',
+  timerSeconds:game?elapsedForGame(i):0,
+  timerRunning:!!game&&!Number.isFinite(Number(state.gameDurations?.[i]))&&!state.gameTimerPaused,
+  timerStartedAt:game&&!Number.isFinite(Number(state.gameDurations?.[i]))&&!state.gameTimerPaused?state.gameStartedAtByIndex?.[i]:null
+ },
+ progress:{completed:state.done.size,total,percent:total?Math.round(state.done.size/total*100):100},
+ courts,
+ schedule:state.games.map((g,n)=>({index:n+1,teams:teamsPayload(g),court:g.court||1,status:state.done.has(n)?(resultPayload(n)?.summary||'Completed'):'Upcoming',done:state.done.has(n),locked:state.locked.has(n),result:resultPayload(n)})),
+ upNext,
+ matchLog:[...state.done].sort((a,b)=>a-b).map(n=>({index:n+1,teams:teamsPayload(state.games[n]),court:state.games[n]?.court||1,result:resultPayload(n)})),
+ rankings:position.map(r=>({position:r.position,name:r.name,w:r.w,l:r.l,g:r.g,winRate:r.g?Math.round(r.w/r.g*100)+'%':'—'})),
+ updatedAt:new Date().toISOString()
+}
+}
 window.CRG_GET_LIVE_SNAPSHOT=liveSnapshotPayload
 window.CRG_RENEW_SESSION_CODE=()=>{const oldCode=state.sessionCode;state.sessionCode=makeCode();try{if(oldCode)localStorage.removeItem(LIVE_HOST_KEY_PREFIX+oldCode)}catch{}render();return state.sessionCode}
 function ordinal(n){const j=n%10,k=n%100;return j===1&&k!==11?"st":j===2&&k!==12?"nd":j===3&&k!==13?"rd":"th"}

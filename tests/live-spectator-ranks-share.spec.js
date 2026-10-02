@@ -212,7 +212,7 @@ async function currentSessionCode(page) {
   return (await page.locator('#sessionCodeText').innerText()).match(/CRG-[A-Z0-9]+/)?.[0] || '';
 }
 
-async function generateSession(page, playerCount, expectedGames) {
+async function generateSession(page, playerCount, expectedGames, courts = 1) {
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
   await page.waitForTimeout(350);
@@ -220,6 +220,7 @@ async function generateSession(page, playerCount, expectedGames) {
   await page.locator('#pastePlayerNames').fill(roster(playerCount));
   await page.locator('#playerConfirm').click();
   await expect(page.locator('#playerList .player-row')).toHaveCount(playerCount, { timeout: 2500 });
+  await page.locator('#courts').fill(String(courts));
   await page.locator('#generateBtn').click();
   await expect(page.locator('#setupStatus')).toContainText('Rotation ready', { timeout: 8000 });
   await expect(page.locator('.game-match')).toHaveCount(expectedGames, { timeout: 5000 });
@@ -863,4 +864,182 @@ test('Ranks Share Results works before results and stays live after standings ch
 
   await page.locator('#liveLeaderboardShareCloseBtn').click();
   await shared.close();
+});
+
+
+test('Two-court live spectator keeps both courts synchronized through results', async ({ page, context }) => {
+  await installFakeSupabase(page);
+  await generateSession(page, 12, 18, 2);
+  await page.waitForTimeout(500);
+
+  const before = await page.evaluate(() => {
+    const snapshot = window.CRG_GET_LIVE_SNAPSHOT?.();
+    return {
+      version: snapshot?.version,
+      courts: snapshot?.courts || [],
+      sessionCode: snapshot?.sessionCode || '',
+    };
+  });
+  expect(before.version).toBe(8);
+  expect(before.courts).toHaveLength(2);
+  expect(before.courts.map(court => Number(court.court))).toEqual([1, 2]);
+  expect(before.courts.every(court => Number.isFinite(Number(court.court)))).toBeTruthy();
+  expect(before.courts.filter(court => court.status === 'playing').length).toBe(2);
+
+  await page.locator('#copyLiveSpectatorBtn').click();
+  await expect.poll(() => page.evaluate(() => window.__crgCopiedText || '')).toMatch(/(?:\?|&)live=CRG-[A-Z0-9]+/);
+  const liveUrl = await page.evaluate(() => window.__crgCopiedText);
+
+  const spectator = await context.newPage();
+  const sharedSessions = await page.evaluate(() => localStorage.getItem('crg-fake-live-sessions-v2') || '{}');
+  await installFakeSupabase(spectator);
+  await spectator.goto('/');
+  await spectator.evaluate(storage => {
+    localStorage.setItem('crg-fake-live-sessions-v2', storage);
+  }, sharedSessions);
+  await spectator.goto(liveUrl);
+  await spectator.waitForLoadState('domcontentloaded');
+
+  await expect(spectator.locator('.spectator-court-card')).toHaveCount(2);
+  const expectedCourtPlayers = Object.fromEntries(before.courts.map(court => [
+    String(court.court),
+    court.teams.flat().map(player => player.name),
+  ]));
+  const initialCourt1Game = await spectator.locator('[data-spectator-court="1"] h2').innerText();
+  const initialCourt1Players = await spectator.locator('[data-spectator-court="1"] .spectator-court-matchup .spectator-player-name').evaluateAll(nodes =>
+    nodes.map(node => (node.childNodes[0]?.textContent || node.textContent || '').replace(/\s+$/, '').trim())
+  );
+  const initialCourt2Game = await spectator.locator('[data-spectator-court="2"] h2').innerText();
+  const initialCourt2Players = await spectator.locator('[data-spectator-court="2"] .spectator-court-matchup .spectator-player-name').evaluateAll(nodes =>
+    nodes.map(node => (node.childNodes[0]?.textContent || node.textContent || '').replace(/\s+$/, '').trim())
+  );
+  expect(initialCourt1Players).toEqual(expectedCourtPlayers['1']);
+  expect(initialCourt2Players).toEqual(expectedCourtPlayers['2']);
+
+  const court1Button = page.locator('#courtCards [data-action="complete"][data-court="1"]');
+  await expect(court1Button).toBeEnabled({ timeout: 5000 });
+  await court1Button.click();
+  await expect(page.locator('[data-winner="0"]')).toBeVisible({ timeout: 5000 });
+  await page.locator('[data-winner="0"]').click();
+  await page.locator('#scoreA').fill('11');
+  await page.locator('#scoreB').fill('7');
+  await page.locator('#scoreConfirm').click();
+
+  await expect.poll(() => spectator.locator('.spectator-court-card').count(), { timeout: 7000 }).toBe(2);
+  await expect(spectator.locator('[data-spectator-court="2"]')).toBeVisible();
+  await expect(spectator.locator('[data-spectator-court="2"] h2')).toHaveText(initialCourt2Game, { timeout: 7000 });
+  await expect.poll(
+    () => spectator.locator('[data-spectator-court="2"] .spectator-court-matchup .spectator-player-name').evaluateAll(nodes =>
+      nodes.map(node => (node.childNodes[0]?.textContent || node.textContent || '').replace(/\s+$/, '').trim())
+    ),
+    { timeout: 7000 }
+  ).toEqual(initialCourt2Players);
+
+  await spectator.close();
+
+  const lateSpectator = await context.newPage();
+  await installFakeSupabase(lateSpectator);
+  await lateSpectator.goto('/');
+  const midSessionStorage = await page.evaluate(() => localStorage.getItem('crg-fake-live-sessions-v2') || '{}');
+  await lateSpectator.evaluate(storage => {
+    localStorage.setItem('crg-fake-live-sessions-v2', storage);
+  }, midSessionStorage);
+  await lateSpectator.goto(liveUrl);
+  await lateSpectator.waitForLoadState('domcontentloaded');
+  await expect(lateSpectator.locator('.spectator-court-card')).toHaveCount(2);
+  await expect(lateSpectator.locator('[data-spectator-court="2"]')).toBeVisible();
+  const beforeCourt2Court1Game = await lateSpectator.locator('[data-spectator-court="1"] h2').innerText();
+  const beforeCourt2Court1Players = await lateSpectator.locator('[data-spectator-court="1"] .spectator-court-matchup .spectator-player-name').evaluateAll(nodes =>
+    nodes.map(node => (node.childNodes[0]?.textContent || node.textContent || '').replace(/\s+$/, '').trim())
+  );
+
+  const court2Button = page.locator('#courtCards [data-action="complete"][data-court="2"]');
+  await expect(court2Button).toBeEnabled({ timeout: 5000 });
+  await court2Button.click();
+  await expect(page.locator('[data-winner="0"]')).toBeVisible({ timeout: 5000 });
+  await page.locator('[data-winner="0"]').click();
+  await page.locator('#scoreA').fill('11');
+  await page.locator('#scoreB').fill('8');
+  await page.locator('#scoreConfirm').click();
+
+  await expect.poll(() => lateSpectator.locator('.spectator-court-card').count(), { timeout: 7000 }).toBe(2);
+  await expect(lateSpectator.locator('[data-spectator-court="1"] h2')).toHaveText(beforeCourt2Court1Game, { timeout: 7000 });
+  await expect.poll(
+    () => lateSpectator.locator('[data-spectator-court="1"] .spectator-court-matchup .spectator-player-name').evaluateAll(nodes =>
+      nodes.map(node => (node.childNodes[0]?.textContent || node.textContent || '').replace(/\s+$/, '').trim())
+    ),
+    { timeout: 7000 }
+  ).toEqual(beforeCourt2Court1Players);
+  await expect(lateSpectator.locator('[data-spectator-court="2"]')).toBeVisible();
+
+  await lateSpectator.close();
+});
+
+test('Version 7 spectator payload keeps the legacy single-court rendering path', async ({ page, context }) => {
+  await installFakeSupabase(page);
+  await generateSession(page, 8, 12);
+  await page.waitForTimeout(400);
+
+  const legacy = {
+    version: 7,
+    sessionCode: 'CRG-V7FUXTRU2A',
+    season: 'Legacy Fixture',
+    current: {
+      game: 'GAME 1',
+      index: 0,
+      court: 1,
+      teams: [
+        [{ name: 'Legacy Alice', skill: 'Intermediate' }, { name: 'Legacy Bob', skill: 'Advanced' }],
+        [{ name: 'Legacy Carol', skill: 'Beginner' }, { name: 'Legacy Dave', skill: 'Expert' }],
+      ],
+      sitting: ['Legacy Eve'],
+      status: 'NEXT UP',
+      timerSeconds: 42,
+      timerRunning: false,
+      timerStartedAt: null,
+    },
+    progress: { completed: 0, total: 1, percent: 0 },
+    schedule: [{
+      index: 1,
+      teams: [
+        [{ name: 'Legacy Alice', skill: 'Intermediate' }, { name: 'Legacy Bob', skill: 'Advanced' }],
+        [{ name: 'Legacy Carol', skill: 'Beginner' }, { name: 'Legacy Dave', skill: 'Expert' }],
+      ],
+      court: 1,
+      status: 'Upcoming',
+      done: false,
+      locked: false,
+      result: null,
+    }],
+    upNext: [],
+    matchLog: [],
+    rankings: [
+      { position: null, name: 'Legacy Alice', w: 0, l: 0, g: 0, winRate: '—' },
+      { position: null, name: 'Legacy Bob', w: 0, l: 0, g: 0, winRate: '—' },
+      { position: null, name: 'Legacy Carol', w: 0, l: 0, g: 0, winRate: '—' },
+      { position: null, name: 'Legacy Dave', w: 0, l: 0, g: 0, winRate: '—' },
+    ],
+    updatedAt: '2026-10-03T00:00:00.000Z',
+  };
+
+  const spectator = await context.newPage();
+  await installFakeSupabase(spectator);
+  await spectator.goto('/');
+  await spectator.evaluate(({ code, payload }) => {
+    return window.__crgSeedLivePayload(code, payload, 'a'.repeat(64));
+  }, { code: legacy.sessionCode, payload: legacy });
+  const liveUrl = '/?live=' + encodeURIComponent(legacy.sessionCode) + '&view=spectator';
+  await spectator.goto(liveUrl);
+  await spectator.waitForLoadState('domcontentloaded');
+
+  await expect(spectator.locator('.spectator-current')).toBeVisible();
+  await expect(spectator.locator('.spectator-current h2')).toHaveText(legacy.current.game);
+  await expect(spectator.locator('.spectator-current .spectator-player-name')).toHaveCount(4);
+  await expect.poll(
+    () => spectator.locator('.spectator-current .spectator-player-name').evaluateAll(nodes =>
+      nodes.map(node => (node.childNodes[0]?.textContent || node.textContent || '').replace(/\s+$/, '').trim())
+    )
+  ).toEqual(['Legacy Alice', 'Legacy Bob', 'Legacy Carol', 'Legacy Dave']);
+  await expect(spectator.locator('.spectator-court-card')).toHaveCount(0);
+  await spectator.close();
 });
