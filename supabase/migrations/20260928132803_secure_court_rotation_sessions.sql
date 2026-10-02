@@ -32,53 +32,6 @@ create table if not exists public.court_rotation_sessions (
   expires_at timestamptz not null default (now() + interval '7 days')
 );
 
--- 20260928030000 creates the table without expires_at and without the
--- secure-format checks. Repair that legacy shape before the policy/function
--- below references expires_at or relies on the secure column contract.
-alter table public.court_rotation_sessions
-  add column if not exists expires_at timestamptz not null
-    default (now() + interval '7 days');
-
-do $$
-begin
-  if not exists (
-    select 1
-    from pg_constraint
-    where conrelid = 'public.court_rotation_sessions'::regclass
-      and conname = 'court_rotation_sessions_session_code_check'
-  ) then
-    alter table public.court_rotation_sessions
-      add constraint court_rotation_sessions_session_code_check
-      check (session_code ~ '^CRG-[A-HJ-NP-Z2-9]{10}$')
-      not valid;
-  end if;
-
-  if not exists (
-    select 1
-    from pg_constraint
-    where conrelid = 'public.court_rotation_sessions'::regclass
-      and conname = 'court_rotation_sessions_host_key_check'
-  ) then
-    alter table public.court_rotation_sessions
-      add constraint court_rotation_sessions_host_key_check
-      check (host_key ~ '^[0-9a-f]{64}$')
-      not valid;
-  end if;
-
-  if not exists (
-    select 1
-    from pg_constraint
-    where conrelid = 'public.court_rotation_sessions'::regclass
-      and conname = 'court_rotation_sessions_payload_check'
-  ) then
-    alter table public.court_rotation_sessions
-      add constraint court_rotation_sessions_payload_check
-      check (octet_length(payload::text) <= 200000)
-      not valid;
-  end if;
-end
-$$;
-
 alter table public.court_rotation_sessions enable row level security;
 
 revoke all on table public.court_rotation_sessions
