@@ -363,7 +363,7 @@ $crg$;
 reset role;
 
 \echo '11. Expiry migration is idempotent and did not create a duplicate named job.'
-do $$
+do $
 declare
   v_job_count integer;
 begin
@@ -375,6 +375,61 @@ begin
     raise exception 'expected one cleanup job, found %', v_job_count;
   end if;
 end
-$$;
+$;
+
+\echo '12. Expiry cleanup command must delete expired rows and retain live rows.'
+do $
+declare
+  v_command text;
+  v_expired_count integer;
+  v_live_count integer;
+begin
+  select command
+    into v_command
+  from cron.job
+  where jobname='crg-expired-session-cleanup';
+
+  if v_command is null then
+    raise exception 'expiry cleanup command was not found';
+  end if;
+
+  insert into public.court_rotation_sessions (
+    session_code, host_key, payload, updated_at, expires_at
+  )
+  values
+    (
+      'CRG-EXPIRETEST1',
+      encode(extensions.digest(repeat('f', 64), 'sha256'), 'hex'),
+      '{"cleanup":"expired"}'::jsonb,
+      now(),
+      now() - interval '1 minute'
+    ),
+    (
+      'CRG-LIVETEST01',
+      encode(extensions.digest(repeat('g', 64), 'sha256'), 'hex'),
+      '{"cleanup":"live"}'::jsonb,
+      now(),
+      now() + interval '1 day'
+    );
+
+  execute v_command;
+
+  select count(*) into v_expired_count
+  from public.court_rotation_sessions
+  where session_code='CRG-EXPIRETEST1';
+
+  select count(*) into v_live_count
+  from public.court_rotation_sessions
+  where session_code='CRG-LIVETEST01';
+
+  if v_expired_count <> 0 then
+    raise exception 'expired row was not deleted';
+  end if;
+
+  if v_live_count <> 1 then
+    raise exception 'live row was unexpectedly deleted';
+  end if;
+end
+$;
 
 \echo 'All secure session migration rehearsal assertions passed.';
