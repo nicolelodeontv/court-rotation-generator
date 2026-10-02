@@ -900,7 +900,8 @@ test('Two-court live spectator keeps both courts synchronized through results', 
   await spectator.waitForLoadState('domcontentloaded');
 
   await expect(spectator.locator('.spectator-court-card')).toHaveCount(2);
-  const initialCourt2 = await spectator.locator('[data-spectator-court="2"]').innerText();
+  const initialCourt2Game = await spectator.locator('[data-spectator-court="2"] h2').innerText();
+  const initialCourt2Matchup = await spectator.locator('[data-spectator-court="2"] .spectator-court-matchup').innerText();
 
   const court1Button = page.locator('#courtCards [data-action="complete"][data-court="1"]');
   await expect(court1Button).toBeEnabled({ timeout: 5000 });
@@ -913,7 +914,8 @@ test('Two-court live spectator keeps both courts synchronized through results', 
 
   await expect.poll(() => spectator.locator('.spectator-court-card').count(), { timeout: 7000 }).toBe(2);
   await expect(spectator.locator('[data-spectator-court="2"]')).toBeVisible();
-  await expect(spectator.locator('[data-spectator-court="2"]')).toHaveText(initialCourt2, { timeout: 7000 });
+  await expect(spectator.locator('[data-spectator-court="2"] h2')).toHaveText(initialCourt2Game, { timeout: 7000 });
+  await expect(spectator.locator('[data-spectator-court="2"] .spectator-court-matchup')).toHaveText(initialCourt2Matchup, { timeout: 7000 });
 
   await spectator.close();
 
@@ -960,7 +962,7 @@ test('Version 7 spectator payload keeps the legacy single-court rendering path',
   await spectator.evaluate(({ code, payload }) => {
     return window.__crgSeedLivePayload(code, payload, 'a'.repeat(64));
   }, { code: snapshot.sessionCode, payload: legacy });
-  const liveUrl = location.origin + location.pathname + '?live=' + encodeURIComponent(snapshot.sessionCode) + '&view=spectator';
+  const liveUrl = '/?live=' + encodeURIComponent(snapshot.sessionCode) + '&view=spectator';
   await spectator.goto(liveUrl);
   await spectator.waitForLoadState('domcontentloaded');
 
