@@ -2,6 +2,9 @@ name: Supabase SQL rehearsal
 # Rehearses the production migrations from the current main base.
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     paths:
       - 'supabase/migrations/**'
