@@ -1,0 +1,109 @@
+name: Supabase SQL rehearsal
+# Rehearses the production migrations from the current main base.
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'tests/sql/supabase-publish-rpc-rehearsal.sql'
+      - '.github/workflows/supabase-sql-rehearsal.yml'
+
+jobs:
+  supabase-sql-rehearsal:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: supabase/postgres:17.6.1.173
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+        command: >-
+          postgres
+          -c config_file=/etc/postgresql/postgresql.conf
+          -c shared_preload_libraries=pg_cron
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Wait for PostgreSQL
+        env:
+          PGPASSWORD: postgres
+        run: until pg_isready -h 127.0.0.1 -p 5432 -U postgres -d postgres; do sleep 2; done
+
+      - name: Create Supabase-style roles and pg_cron
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+          do $$
+          begin
+            if not exists (select 1 from pg_roles where rolname = 'anon') then
+              create role anon nologin;
+            end if;
+            if not exists (select 1 from pg_roles where rolname = 'authenticated') then
+              create role authenticated nologin;
+            end if;
+            if not exists (select 1 from pg_roles where rolname = 'service_role') then
+              create role service_role nologin;
+            end if;
+          end
+          $$;
+
+          create extension if not exists pg_cron;
+          SQL
+
+      - name: Apply secure session migration unchanged
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1             -f supabase/migrations/20260928132803_secure_court_rotation_sessions.sql
+
+      - name: Seed legacy access drift for reconciliation test
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+          grant select, insert, update on table public.court_rotation_sessions to anon, authenticated;
+          drop policy if exists "court sessions anonymous read" on public.court_rotation_sessions;
+          drop policy if exists "court sessions keyed host insert" on public.court_rotation_sessions;
+          drop policy if exists "court sessions keyed host update" on public.court_rotation_sessions;
+          create policy "court sessions anonymous read" on public.court_rotation_sessions for select to anon,authenticated using (true);
+          create policy "court sessions keyed host insert" on public.court_rotation_sessions for insert to anon,authenticated with check (length(host_key)>=32 and host_key=coalesce(current_setting('request.headers',true)::json->>'x-crg-host-key',''));
+          create policy "court sessions keyed host update" on public.court_rotation_sessions for update to anon,authenticated using (host_key=coalesce(current_setting('request.headers',true)::json->>'x-crg-host-key','')) with check (length(host_key)>=32 and host_key=coalesce(current_setting('request.headers',true)::json->>'x-crg-host-key',''));
+          SQL
+
+      - name: Apply access reconciliation migration unchanged
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1             -f supabase/migrations/20261002003449_reconcile_legacy_secure_session_contract.sql
+
+      - name: Apply expiry cleanup migration unchanged
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1             -f supabase/migrations/20260928170000_schedule_expired_session_cleanup.sql
+
+      - name: Reapply migrations unchanged
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260928132803_secure_court_rotation_sessions.sql
+          psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20261002003449_reconcile_legacy_secure_session_contract.sql
+          psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260928170000_schedule_expired_session_cleanup.sql
+
+      - name: Run SQL rehearsal assertions
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1             -f tests/sql/supabase-publish-rpc-rehearsal.sql
