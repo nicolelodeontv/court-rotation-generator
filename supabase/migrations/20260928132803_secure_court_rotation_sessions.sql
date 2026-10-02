@@ -15,6 +15,8 @@
 -- legacy four-column schema. The guarded schema repair below makes this
 -- historical migration replayable after that legacy migration. It is
 -- idempotent and does not change an already-secure table.
+-- Legacy-table check constraints are added NOT VALID so replay does not depend
+-- on existing legacy rows satisfying the new secure-format checks.
 
 create schema if not exists extensions;
 create extension if not exists pgcrypto with schema extensions;
@@ -47,7 +49,8 @@ begin
   ) then
     alter table public.court_rotation_sessions
       add constraint court_rotation_sessions_session_code_check
-      check (session_code ~ '^CRG-[A-HJ-NP-Z2-9]{10}$');
+      check (session_code ~ '^CRG-[A-HJ-NP-Z2-9]{10}$')
+      not valid;
   end if;
 
   if not exists (
@@ -58,7 +61,8 @@ begin
   ) then
     alter table public.court_rotation_sessions
       add constraint court_rotation_sessions_host_key_check
-      check (host_key ~ '^[0-9a-f]{64}$');
+      check (host_key ~ '^[0-9a-f]{64}$')
+      not valid;
   end if;
 
   if not exists (
@@ -69,7 +73,8 @@ begin
   ) then
     alter table public.court_rotation_sessions
       add constraint court_rotation_sessions_payload_check
-      check (octet_length(payload::text) <= 200000);
+      check (octet_length(payload::text) <= 200000)
+      not valid;
   end if;
 end
 $$;
