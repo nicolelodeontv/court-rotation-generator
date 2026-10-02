@@ -398,7 +398,7 @@ begin
   )
   values
     (
-      'CRG-EXPIRETEST1',
+      'CRG-EXPTEST01',
       encode(extensions.digest(repeat('f', 64), 'sha256'), 'hex'),
       '{"cleanup":"expired"}'::jsonb,
       now(),
@@ -416,7 +416,7 @@ begin
 
   select count(*) into v_expired_count
   from public.court_rotation_sessions
-  where session_code='CRG-EXPIRETEST1';
+  where session_code='CRG-EXPTEST01';
 
   select count(*) into v_live_count
   from public.court_rotation_sessions
