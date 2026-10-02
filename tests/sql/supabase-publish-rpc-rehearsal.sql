@@ -101,7 +101,7 @@ begin
   from cron.job
   where jobname='crg-expired-session-cleanup'
     and schedule='0 * * * *'
-    and command='delete from public.court_rotation_sessions where expires_at <= now()'
+    and command='delete from public.court_rotation_sessions where expires_at >= now()'
     and active;
 
   if v_cron_count <> 1 then
