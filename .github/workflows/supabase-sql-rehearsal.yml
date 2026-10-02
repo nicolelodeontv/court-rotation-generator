@@ -1,4 +1,5 @@
 name: Supabase SQL rehearsal
+# Rehearses the production migrations from the current main base.
 
 on:
   pull_request:
