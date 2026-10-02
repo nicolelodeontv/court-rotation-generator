@@ -980,10 +980,9 @@ test('Version 7 spectator payload keeps the legacy single-court rendering path',
   await generateSession(page, 8, 12);
   await page.waitForTimeout(400);
 
-  const snapshot = await page.evaluate(() => window.CRG_GET_LIVE_SNAPSHOT?.());
   const legacy = {
     version: 7,
-    sessionCode: 'CRG-V7FIXTURE2',
+    sessionCode: 'CRG-V7FUXTRU2A',
     season: 'Legacy Fixture',
     current: {
       game: 'GAME 1',
