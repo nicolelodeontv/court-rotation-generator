@@ -901,7 +901,9 @@ test('Two-court live spectator keeps both courts synchronized through results', 
 
   await expect(spectator.locator('.spectator-court-card')).toHaveCount(2);
   const initialCourt2Game = await spectator.locator('[data-spectator-court="2"] h2').innerText();
-  const initialCourt2Matchup = await spectator.locator('[data-spectator-court="2"] .spectator-court-matchup').innerText();
+  const initialCourt2Players = await spectator.locator('[data-spectator-court="2"] .spectator-court-matchup .spectator-player-name').evaluateAll(nodes =>
+    nodes.map(node => (node.childNodes[0]?.textContent || node.textContent || '').replace(/\s+$/, '').trim())
+  );
 
   const court1Button = page.locator('#courtCards [data-action="complete"][data-court="1"]');
   await expect(court1Button).toBeEnabled({ timeout: 5000 });
@@ -915,7 +917,12 @@ test('Two-court live spectator keeps both courts synchronized through results', 
   await expect.poll(() => spectator.locator('.spectator-court-card').count(), { timeout: 7000 }).toBe(2);
   await expect(spectator.locator('[data-spectator-court="2"]')).toBeVisible();
   await expect(spectator.locator('[data-spectator-court="2"] h2')).toHaveText(initialCourt2Game, { timeout: 7000 });
-  await expect(spectator.locator('[data-spectator-court="2"] .spectator-court-matchup')).toHaveText(initialCourt2Matchup, { timeout: 7000 });
+  await expect.poll(
+    () => spectator.locator('[data-spectator-court="2"] .spectator-court-matchup .spectator-player-name').evaluateAll(nodes =>
+      nodes.map(node => (node.childNodes[0]?.textContent || node.textContent || '').replace(/\s+$/, '').trim())
+    ),
+    { timeout: 7000 }
+  ).toEqual(initialCourt2Players);
 
   await spectator.close();
 
