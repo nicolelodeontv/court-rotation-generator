@@ -212,7 +212,7 @@ async function currentSessionCode(page) {
   return (await page.locator('#sessionCodeText').innerText()).match(/CRG-[A-Z0-9]+/)?.[0] || '';
 }
 
-async function generateSession(page, playerCount, expectedGames) {
+async function generateSession(page, playerCount, expectedGames, courts = 1) {
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
   await page.waitForTimeout(350);
@@ -220,6 +220,7 @@ async function generateSession(page, playerCount, expectedGames) {
   await page.locator('#pastePlayerNames').fill(roster(playerCount));
   await page.locator('#playerConfirm').click();
   await expect(page.locator('#playerList .player-row')).toHaveCount(playerCount, { timeout: 2500 });
+  await page.locator('#courts').fill(String(courts));
   await page.locator('#generateBtn').click();
   await expect(page.locator('#setupStatus')).toContainText('Rotation ready', { timeout: 8000 });
   await expect(page.locator('.game-match')).toHaveCount(expectedGames, { timeout: 5000 });
@@ -863,4 +864,108 @@ test('Ranks Share Results works before results and stays live after standings ch
 
   await page.locator('#liveLeaderboardShareCloseBtn').click();
   await shared.close();
+});
+
+
+test('Two-court live spectator keeps both courts synchronized through results', async ({ page, context }) => {
+  await installFakeSupabase(page);
+  await generateSession(page, 12, 18, 2);
+  await page.waitForTimeout(500);
+
+  const before = await page.evaluate(() => {
+    const snapshot = window.CRG_GET_LIVE_SNAPSHOT?.();
+    return {
+      version: snapshot?.version,
+      courts: snapshot?.courts || [],
+      sessionCode: snapshot?.sessionCode || '',
+    };
+  });
+  expect(before.version).toBe(8);
+  expect(before.courts).toHaveLength(2);
+  expect(before.courts.every(court => Number.isFinite(Number(court.court)))).toBeTruthy();
+  expect(before.courts.filter(court => court.status === 'playing').length).toBeGreaterThanOrEqual(2);
+
+  await page.locator('#copyLiveSpectatorBtn').click();
+  await expect.poll(() => page.evaluate(() => window.__crgCopiedText || '')).toMatch(/(?:\?|&)live=CRG-[A-Z0-9]+/);
+  const liveUrl = await page.evaluate(() => window.__crgCopiedText);
+
+  const spectator = await context.newPage();
+  const sharedSessions = await page.evaluate(() => localStorage.getItem('crg-fake-live-sessions-v2') || '{}');
+  await installFakeSupabase(spectator);
+  await spectator.goto('/');
+  await spectator.evaluate(storage => {
+    localStorage.setItem('crg-fake-live-sessions-v2', storage);
+  }, sharedSessions);
+  await spectator.goto(liveUrl);
+  await spectator.waitForLoadState('domcontentloaded');
+
+  await expect(spectator.locator('.spectator-court-card')).toHaveCount(2);
+  const initialCourt2 = await spectator.locator('[data-spectator-court="2"]').innerText();
+
+  const court1Button = page.locator('#courtCards [data-action="complete"][data-court="1"]');
+  await expect(court1Button).toBeEnabled({ timeout: 5000 });
+  await court1Button.click();
+  await expect(page.locator('[data-winner="0"]')).toBeVisible({ timeout: 5000 });
+  await page.locator('[data-winner="0"]').click();
+  await page.locator('#scoreA').fill('11');
+  await page.locator('#scoreB').fill('7');
+  await page.locator('#scoreConfirm').click();
+
+  await expect.poll(() => spectator.locator('.spectator-court-card').count(), { timeout: 7000 }).toBe(2);
+  await expect(spectator.locator('[data-spectator-court="2"]')).toBeVisible();
+  await expect(spectator.locator('[data-spectator-court="2"]')).toHaveText(initialCourt2, { timeout: 7000 });
+
+  await spectator.close();
+
+  const lateSpectator = await context.newPage();
+  await installFakeSupabase(lateSpectator);
+  await lateSpectator.goto('/');
+  const midSessionStorage = await page.evaluate(() => localStorage.getItem('crg-fake-live-sessions-v2') || '{}');
+  await lateSpectator.evaluate(storage => {
+    localStorage.setItem('crg-fake-live-sessions-v2', storage);
+  }, midSessionStorage);
+  await lateSpectator.goto(liveUrl);
+  await lateSpectator.waitForLoadState('domcontentloaded');
+  await expect(lateSpectator.locator('.spectator-court-card')).toHaveCount(2);
+  await expect(lateSpectator.locator('[data-spectator-court="2"]')).toBeVisible();
+
+  const court2Button = page.locator('#courtCards [data-action="complete"][data-court="2"]');
+  await expect(court2Button).toBeEnabled({ timeout: 5000 });
+  await court2Button.click();
+  await expect(page.locator('[data-winner="0"]')).toBeVisible({ timeout: 5000 });
+  await page.locator('[data-winner="0"]').click();
+  await page.locator('#scoreA').fill('11');
+  await page.locator('#scoreB').fill('8');
+  await page.locator('#scoreConfirm').click();
+
+  await expect.poll(() => lateSpectator.locator('.spectator-court-card').count(), { timeout: 7000 }).toBe(2);
+  await expect(lateSpectator.locator('[data-spectator-court="1"]')).toBeVisible();
+  await expect(lateSpectator.locator('[data-spectator-court="2"]')).toBeVisible();
+
+  await lateSpectator.close();
+});
+
+test('Version 7 spectator payload keeps the legacy single-court rendering path', async ({ page, context }) => {
+  await installFakeSupabase(page);
+  await generateSession(page, 8, 12);
+  await page.waitForTimeout(400);
+
+  const snapshot = await page.evaluate(() => window.CRG_GET_LIVE_SNAPSHOT?.());
+  const legacy = { ...snapshot, version: 7 };
+  delete legacy.courts;
+
+  const spectator = await context.newPage();
+  await installFakeSupabase(spectator);
+  await spectator.goto('/');
+  await spectator.evaluate(({ code, payload }) => {
+    return window.__crgSeedLivePayload(code, payload, 'a'.repeat(64));
+  }, { code: snapshot.sessionCode, payload: legacy });
+  const liveUrl = location.origin + location.pathname + '?live=' + encodeURIComponent(snapshot.sessionCode) + '&view=spectator';
+  await spectator.goto(liveUrl);
+  await spectator.waitForLoadState('domcontentloaded');
+
+  await expect(spectator.locator('.spectator-current')).toBeVisible();
+  await expect(spectator.locator('.spectator-current h2')).toHaveText(snapshot.current.game);
+  await expect(spectator.locator('.spectator-court-card')).toHaveCount(0);
+  await spectator.close();
 });
