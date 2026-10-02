@@ -698,6 +698,29 @@ test('Live publish never falls back to a direct table write when the RPC is unav
   await expect(page.locator('#crgToast')).toContainText('Live sync unavailable', { timeout: 1000 });
 });
 
+test('Host publish failure offers the existing read-only snapshot fallback', async ({ page }) => {
+  await installFakeSupabase(page);
+  await generateSession(page, 8, 12);
+  await page.evaluate(() => { window.__crgFailPublishRpc = true; window.__crgCopiedText = ''; });
+  const result = await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.());
+  expect(result?.storageReady).toBeFalsy();
+  await expect(page.locator('#copyPublishFallbackBtn')).toHaveText('Copy read-only snapshot');
+  await expect(page.locator('.live-publish-fallback')).toContainText('Live sync is unavailable');
+  await page.locator('#copyPublishFallbackBtn').click();
+  await expect.poll(() => page.evaluate(() => window.__crgCopiedText || '')).toMatch(/(?:\?|&)s=/);
+  const url = await page.evaluate(() => window.__crgCopiedText);
+  const payload = await page.evaluate(urlValue => {
+    const encoded = new URL(urlValue).searchParams.get('s');
+    const raw = decodeURIComponent(encoded).replace(/ /g, '+');
+    return JSON.parse(decodeURIComponent(escape(atob(raw))));
+  }, url);
+  expect(payload.version).toBe(8);
+  expect(payload.sessionCode).toMatch(/^CRG-[A-Z0-9]{10}$/);
+  expect(JSON.stringify(payload)).not.toContain('crg-supabase-host-key-v1');
+  expect(JSON.stringify(payload)).not.toContain('hostKey');
+  expect(await page.evaluate(() => window.__crgDirectWrites || 0)).toBe(0);
+  await page.evaluate(() => { window.__crgFailPublishRpc = false; });
+});
 test('Live publish waits for runtime Supabase config before sending the first RPC', async ({ page }) => {
   await installFakeSupabase(page, { delay: 1000 });
   await generateSession(page, 8, 12);
@@ -979,9 +1002,9 @@ test('Two-court live spectator keeps both courts synchronized through results', 
   await lateSpectator.close();
 });
 
-test('Spectator keeps the last state and offers a read-only snapshot when live reads fail', async ({ page, context }) => {
+test('Spectator keeps both court states and offers a read-only snapshot when live reads fail', async ({ page, context }) => {
   await installFakeSupabase(page);
-  await generateSession(page, 8, 12);
+  await generateSession(page, 12, 18, 2);
   await page.locator('#copyLiveSpectatorBtn').click();
   await expect.poll(() => page.evaluate(() => window.__crgCopiedText || '')).toMatch(/(?:\\?|&)live=CRG-[A-Z0-9]+/);
   const liveUrl = await page.evaluate(() => window.__crgCopiedText);
@@ -993,14 +1016,21 @@ test('Spectator keeps the last state and offers a read-only snapshot when live r
   await spectator.evaluate(storage => localStorage.setItem('crg-fake-live-sessions-v2', storage), sharedSessions);
   await spectator.goto(liveUrl);
   await spectator.waitForLoadState('domcontentloaded');
-  await expect(spectator.locator('.spectator-current')).toBeVisible();
-  const initialGame = await spectator.locator('.spectator-current h2').innerText();
+  await expect(spectator.locator('.spectator-court-card')).toHaveCount(2);
+  const initialCourtGames = await spectator.locator('.spectator-court-card h2').allTextContents();
+  const initialCourtPlayers = await spectator.locator('.spectator-court-card .spectator-player-name').evaluateAll(nodes =>
+    nodes.map(node => (node.childNodes[0]?.textContent || node.textContent || '').replace(/\s+$/, '').trim())
+  );
 
   await spectator.evaluate(() => { window.__crgFailSelect = true; });
   await expect(spectator.locator('.spectator-live-failure')).toBeVisible({ timeout: 5500 });
   await expect(spectator.locator('.spectator-live-failure h2')).toHaveText('Live sync unavailable');
   await expect(spectator.locator('#spectatorSnapshotBtn')).toHaveText('Copy read-only snapshot');
-  await expect(spectator.locator('.spectator-current h2')).toHaveText(initialGame);
+  await expect(spectator.locator('.spectator-court-card')).toHaveCount(2);
+  expect(await spectator.locator('.spectator-court-card h2').allTextContents()).toEqual(initialCourtGames);
+  expect(await spectator.locator('.spectator-court-card .spectator-player-name').evaluateAll(nodes =>
+    nodes.map(node => (node.childNodes[0]?.textContent || node.textContent || '').replace(/\s+$/, '').trim())
+  )).toEqual(initialCourtPlayers);
 
   await spectator.locator('#spectatorSnapshotBtn').click();
   await expect.poll(() => spectator.evaluate(() => window.__crgCopiedText || '')).toMatch(/(?:\\?|&)s=/);
