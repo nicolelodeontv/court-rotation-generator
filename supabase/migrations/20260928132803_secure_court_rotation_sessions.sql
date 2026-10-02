@@ -9,6 +9,14 @@
 -- The deployed definition is authoritative for this source record.
 -- Expired-session cleanup is recorded separately in the subsequent pg_cron
 -- migration, matching the cleanup job already present in production.
+--
+-- Fresh-replay compatibility:
+-- 20260928030000_court_rotation_sessions may create this table first with the
+-- legacy four-column schema. The guarded schema repair below makes this
+-- historical migration replayable after that legacy migration. It is
+-- idempotent and does not change an already-secure table.
+-- Legacy-table check constraints are added NOT VALID so replay does not depend
+-- on existing legacy rows satisfying the new secure-format checks.
 
 create schema if not exists extensions;
 create extension if not exists pgcrypto with schema extensions;
@@ -23,6 +31,53 @@ create table if not exists public.court_rotation_sessions (
   updated_at timestamptz not null default (now()),
   expires_at timestamptz not null default (now() + interval '7 days')
 );
+
+-- 20260928030000 creates the table without expires_at and without the
+-- secure-format checks. Repair that legacy shape before the policy/function
+-- below references expires_at or relies on the secure column contract.
+alter table public.court_rotation_sessions
+  add column if not exists expires_at timestamptz not null
+    default (now() + interval '7 days');
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.court_rotation_sessions'::regclass
+      and conname = 'court_rotation_sessions_session_code_check'
+  ) then
+    alter table public.court_rotation_sessions
+      add constraint court_rotation_sessions_session_code_check
+      check (session_code ~ '^CRG-[A-HJ-NP-Z2-9]{10}$')
+      not valid;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.court_rotation_sessions'::regclass
+      and conname = 'court_rotation_sessions_host_key_check'
+  ) then
+    alter table public.court_rotation_sessions
+      add constraint court_rotation_sessions_host_key_check
+      check (host_key ~ '^[0-9a-f]{64}$')
+      not valid;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.court_rotation_sessions'::regclass
+      and conname = 'court_rotation_sessions_payload_check'
+  ) then
+    alter table public.court_rotation_sessions
+      add constraint court_rotation_sessions_payload_check
+      check (octet_length(payload::text) <= 200000)
+      not valid;
+  end if;
+end
+$$;
 
 alter table public.court_rotation_sessions enable row level security;
 
