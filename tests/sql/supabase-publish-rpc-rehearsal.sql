@@ -363,7 +363,7 @@ $crg$;
 reset role;
 
 \echo '11. Expiry migration is idempotent and did not create a duplicate named job.'
-do $
+do $crg$
 declare
   v_job_count integer;
 begin
@@ -375,10 +375,10 @@ begin
     raise exception 'expected one cleanup job, found %', v_job_count;
   end if;
 end
-$;
+$crg$;
 
 \echo '12. Expiry cleanup command must delete expired rows and retain live rows.'
-do $
+do $crg$
 declare
   v_command text;
   v_expired_count integer;
@@ -412,6 +412,14 @@ begin
       now() + interval '1 day'
     );
 
+  select count(*) into v_expired_count
+  from public.court_rotation_sessions
+  where session_code in ('CRG-EXPTEST01', 'CRG-LIVETEST01');
+
+  if v_expired_count <> 2 then
+    raise exception 'cleanup test precondition expected two rows, found %', v_expired_count;
+  end if;
+
   execute v_command;
 
   select count(*) into v_expired_count
@@ -430,6 +438,6 @@ begin
     raise exception 'live row was unexpectedly deleted';
   end if;
 end
-$;
+$crg$;
 
 \echo 'All secure session migration rehearsal assertions passed.';
