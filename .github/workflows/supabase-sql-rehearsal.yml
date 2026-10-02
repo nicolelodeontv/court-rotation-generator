@@ -62,11 +62,29 @@ jobs:
           create extension if not exists pg_cron;
           SQL
 
+      - name: Apply legacy session migration unchanged
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1             -f supabase/migrations/20260928030000_court_rotation_sessions.sql
+
       - name: Apply secure session migration unchanged
         env:
           PGPASSWORD: postgres
         run: |
           psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1             -f supabase/migrations/20260928132803_secure_court_rotation_sessions.sql
+
+      - name: Apply expiry cleanup migration unchanged
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1             -f supabase/migrations/20260928170000_schedule_expired_session_cleanup.sql
+
+      - name: Apply access reconciliation migration unchanged
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1             -f supabase/migrations/20261002003449_reconcile_legacy_secure_session_contract.sql
 
       - name: Seed legacy access drift for reconciliation test
         env:
@@ -82,25 +100,20 @@ jobs:
           create policy "court sessions keyed host update" on public.court_rotation_sessions for update to anon,authenticated using (host_key=coalesce(current_setting('request.headers',true)::json->>'x-crg-host-key','')) with check (length(host_key)>=32 and host_key=coalesce(current_setting('request.headers',true)::json->>'x-crg-host-key',''));
           SQL
 
-      - name: Apply access reconciliation migration unchanged
+      - name: Reapply access reconciliation migration unchanged
         env:
           PGPASSWORD: postgres
         run: |
           psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1             -f supabase/migrations/20261002003449_reconcile_legacy_secure_session_contract.sql
 
-      - name: Apply expiry cleanup migration unchanged
+      - name: Reapply full production migration chain unchanged
         env:
           PGPASSWORD: postgres
         run: |
+          psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1             -f supabase/migrations/20260928030000_court_rotation_sessions.sql
+          psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1             -f supabase/migrations/20260928132803_secure_court_rotation_sessions.sql
           psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1             -f supabase/migrations/20260928170000_schedule_expired_session_cleanup.sql
-
-      - name: Reapply migrations unchanged
-        env:
-          PGPASSWORD: postgres
-        run: |
-          psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260928132803_secure_court_rotation_sessions.sql
-          psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20261002003449_reconcile_legacy_secure_session_contract.sql
-          psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1 -f supabase/migrations/20260928170000_schedule_expired_session_cleanup.sql
+          psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1             -f supabase/migrations/20261002003449_reconcile_legacy_secure_session_contract.sql
 
       - name: Run SQL rehearsal assertions
         env:
