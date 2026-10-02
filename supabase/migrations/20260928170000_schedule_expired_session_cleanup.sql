@@ -1,3 +1,6 @@
+-- SCRATCH NEGATIVE CONTROL ONLY: invert expiry comparison so cleanup is intentionally wrong.
+-- This branch is never to be merged.
+--
 -- Court Rotation Generator: record the deployed pg_cron expiry cleanup.
 -- The production job was first observed running at 2026-09-28 17:00 UTC.
 -- pg_cron does not expose a creator timestamp, so this migration records the
@@ -15,7 +18,7 @@ begin
     perform cron.schedule(
       'crg-expired-session-cleanup',
       '0 * * * *',
-      'delete from public.court_rotation_sessions where expires_at <= now()'
+      'delete from public.court_rotation_sessions where expires_at >= now()'
     );
   end if;
 end
