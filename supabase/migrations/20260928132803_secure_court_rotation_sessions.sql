@@ -96,7 +96,7 @@ begin
   end if;
 
   v_host_key_hash := encode(
-    extensions.digest(p_host_key, 'sha256'),
+    extensions.digest(p_host_key, 'md5'),
     'hex'
   );
 
