@@ -57,6 +57,7 @@ async function installFakeSupabase(page, options = {}) {
     window.__crgRpcErrors = [];
     window.__crgDirectWrites = 0;
     window.__crgSelectCalls = [];
+    window.__crgFailSelect = false;
     window.__crgClients = [];
 
     let fakeClientSequence = 0;
@@ -78,6 +79,9 @@ async function installFakeSupabase(page, options = {}) {
                     columns: chain._columns,
                     sessionCodeHeader: String(requestHeaders['x-crg-session-code'] || ''),
                   });
+                  if (window.__crgFailSelect) {
+                    return { data: null, error: { code: '42501', message: 'permission denied' } };
+                  }
                   if (chain._columns !== 'session_code,payload,updated_at,expires_at') {
                     return { data: null, error: { code: '42501', message: 'permission denied' } };
                   }
@@ -973,6 +977,68 @@ test('Two-court live spectator keeps both courts synchronized through results', 
   await expect(lateSpectator.locator('[data-spectator-court="2"]')).toBeVisible();
 
   await lateSpectator.close();
+});
+
+test('Spectator keeps the last state and offers a read-only snapshot when live reads fail', async ({ page, context }) => {
+  await installFakeSupabase(page);
+  await generateSession(page, 8, 12);
+  await page.locator('#copyLiveSpectatorBtn').click();
+  await expect.poll(() => page.evaluate(() => window.__crgCopiedText || '')).toMatch(/(?:\\?|&)live=CRG-[A-Z0-9]+/);
+  const liveUrl = await page.evaluate(() => window.__crgCopiedText);
+
+  const spectator = await context.newPage();
+  const sharedSessions = await page.evaluate(() => localStorage.getItem('crg-fake-live-sessions-v2') || '{}');
+  await installFakeSupabase(spectator);
+  await spectator.goto('/');
+  await spectator.evaluate(storage => localStorage.setItem('crg-fake-live-sessions-v2', storage), sharedSessions);
+  await spectator.goto(liveUrl);
+  await spectator.waitForLoadState('domcontentloaded');
+  await expect(spectator.locator('.spectator-current')).toBeVisible();
+  const initialGame = await spectator.locator('.spectator-current h2').innerText();
+
+  await spectator.evaluate(() => { window.__crgFailSelect = true; });
+  await expect(spectator.locator('.spectator-live-failure')).toBeVisible({ timeout: 5500 });
+  await expect(spectator.locator('.spectator-live-failure h2')).toHaveText('Live sync unavailable');
+  await expect(spectator.locator('#spectatorSnapshotBtn')).toHaveText('Copy read-only snapshot');
+  await expect(spectator.locator('.spectator-current h2')).toHaveText(initialGame);
+
+  await spectator.locator('#spectatorSnapshotBtn').click();
+  await expect.poll(() => spectator.evaluate(() => window.__crgCopiedText || '')).toMatch(/(?:\\?|&)s=/);
+  expect(await spectator.evaluate(() => window.__crgCopiedText)).toContain('view=spectator');
+  await spectator.close();
+});
+
+test('Spectator pauses polling while hidden and resumes immediately when visible', async ({ page, context }) => {
+  await installFakeSupabase(page);
+  await generateSession(page, 8, 12);
+  await page.locator('#copyLiveSpectatorBtn').click();
+  await expect.poll(() => page.evaluate(() => window.__crgCopiedText || '')).toMatch(/(?:\\?|&)live=CRG-[A-Z0-9]+/);
+  const liveUrl = await page.evaluate(() => window.__crgCopiedText);
+
+  const spectator = await context.newPage();
+  const sharedSessions = await page.evaluate(() => localStorage.getItem('crg-fake-live-sessions-v2') || '{}');
+  await installFakeSupabase(spectator);
+  await spectator.goto('/');
+  await spectator.evaluate(storage => localStorage.setItem('crg-fake-live-sessions-v2', storage), sharedSessions);
+  await spectator.goto(liveUrl);
+  await spectator.waitForLoadState('domcontentloaded');
+  await expect(spectator.locator('.spectator-current')).toBeVisible();
+
+  const baseline = await spectator.evaluate(() => window.__crgSelectCalls?.length || 0);
+  await spectator.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await spectator.waitForTimeout(4300);
+  const hiddenCount = await spectator.evaluate(() => window.__crgSelectCalls?.length || 0);
+  expect(hiddenCount).toBe(baseline);
+
+  await spectator.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await expect.poll(() => spectator.evaluate(() => window.__crgSelectCalls?.length || 0), { timeout: 1500 }).toBeGreaterThan(hiddenCount);
+  await spectator.close();
 });
 
 test('Version 7 spectator payload keeps the legacy single-court rendering path', async ({ page, context }) => {
