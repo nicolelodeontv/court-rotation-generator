@@ -381,6 +381,7 @@ $crg$;
 do $crg$
 declare
   v_command text;
+  v_seed_count integer;
   v_expired_count integer;
   v_live_count integer;
 begin
@@ -398,37 +399,37 @@ begin
   )
   values
     (
-      'CRG-EXPTEST01',
+      'CRG-EXPTESTX01',
       encode(extensions.digest(repeat('f', 64), 'sha256'), 'hex'),
       '{"cleanup":"expired"}'::jsonb,
       now(),
       now() - interval '1 minute'
     ),
     (
-      'CRG-LIVETEST01',
+      'CRG-LVTESTXX01',
       encode(extensions.digest(repeat('g', 64), 'sha256'), 'hex'),
       '{"cleanup":"live"}'::jsonb,
       now(),
       now() + interval '1 day'
     );
 
-  select count(*) into v_expired_count
+  select count(*) into v_seed_count
   from public.court_rotation_sessions
-  where session_code in ('CRG-EXPTEST01', 'CRG-LIVETEST01');
+  where session_code in ('CRG-EXPTESTX01', 'CRG-LVTESTXX01');
 
-  if v_expired_count <> 2 then
-    raise exception 'cleanup test precondition expected two rows, found %', v_expired_count;
+  if v_seed_count <> 2 then
+    raise exception 'cleanup test precondition expected two rows, found %', v_seed_count;
   end if;
 
   execute v_command;
 
   select count(*) into v_expired_count
   from public.court_rotation_sessions
-  where session_code='CRG-EXPTEST01';
+  where session_code='CRG-EXPTESTX01';
 
   select count(*) into v_live_count
   from public.court_rotation_sessions
-  where session_code='CRG-LIVETEST01';
+  where session_code='CRG-LVTESTXX01';
 
   if v_expired_count <> 0 then
     raise exception 'expired row was not deleted';
