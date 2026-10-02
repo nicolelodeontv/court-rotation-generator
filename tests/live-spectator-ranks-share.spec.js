@@ -882,8 +882,9 @@ test('Two-court live spectator keeps both courts synchronized through results', 
   });
   expect(before.version).toBe(8);
   expect(before.courts).toHaveLength(2);
+  expect(before.courts.map(court => Number(court.court))).toEqual([1, 2]);
   expect(before.courts.every(court => Number.isFinite(Number(court.court)))).toBeTruthy();
-  expect(before.courts.filter(court => court.status === 'playing').length).toBeGreaterThanOrEqual(2);
+  expect(before.courts.filter(court => court.status === 'playing').length).toBe(2);
 
   await page.locator('#copyLiveSpectatorBtn').click();
   await expect.poll(() => page.evaluate(() => window.__crgCopiedText || '')).toMatch(/(?:\?|&)live=CRG-[A-Z0-9]+/);
@@ -900,10 +901,20 @@ test('Two-court live spectator keeps both courts synchronized through results', 
   await spectator.waitForLoadState('domcontentloaded');
 
   await expect(spectator.locator('.spectator-court-card')).toHaveCount(2);
+  const expectedCourtPlayers = Object.fromEntries(before.courts.map(court => [
+    String(court.court),
+    court.teams.flat().map(player => player.name),
+  ]));
+  const initialCourt1Game = await spectator.locator('[data-spectator-court="1"] h2').innerText();
+  const initialCourt1Players = await spectator.locator('[data-spectator-court="1"] .spectator-court-matchup .spectator-player-name').evaluateAll(nodes =>
+    nodes.map(node => (node.childNodes[0]?.textContent || node.textContent || '').replace(/\s+$/, '').trim())
+  );
   const initialCourt2Game = await spectator.locator('[data-spectator-court="2"] h2').innerText();
   const initialCourt2Players = await spectator.locator('[data-spectator-court="2"] .spectator-court-matchup .spectator-player-name').evaluateAll(nodes =>
     nodes.map(node => (node.childNodes[0]?.textContent || node.textContent || '').replace(/\s+$/, '').trim())
   );
+  expect(initialCourt1Players).toEqual(expectedCourtPlayers['1']);
+  expect(initialCourt2Players).toEqual(expectedCourtPlayers['2']);
 
   const court1Button = page.locator('#courtCards [data-action="complete"][data-court="1"]');
   await expect(court1Button).toBeEnabled({ timeout: 5000 });
@@ -937,6 +948,10 @@ test('Two-court live spectator keeps both courts synchronized through results', 
   await lateSpectator.waitForLoadState('domcontentloaded');
   await expect(lateSpectator.locator('.spectator-court-card')).toHaveCount(2);
   await expect(lateSpectator.locator('[data-spectator-court="2"]')).toBeVisible();
+  const beforeCourt2Court1Game = await lateSpectator.locator('[data-spectator-court="1"] h2').innerText();
+  const beforeCourt2Court1Players = await lateSpectator.locator('[data-spectator-court="1"] .spectator-court-matchup .spectator-player-name').evaluateAll(nodes =>
+    nodes.map(node => (node.childNodes[0]?.textContent || node.textContent || '').replace(/\s+$/, '').trim())
+  );
 
   const court2Button = page.locator('#courtCards [data-action="complete"][data-court="2"]');
   await expect(court2Button).toBeEnabled({ timeout: 5000 });
@@ -948,7 +963,13 @@ test('Two-court live spectator keeps both courts synchronized through results', 
   await page.locator('#scoreConfirm').click();
 
   await expect.poll(() => lateSpectator.locator('.spectator-court-card').count(), { timeout: 7000 }).toBe(2);
-  await expect(lateSpectator.locator('[data-spectator-court="1"]')).toBeVisible();
+  await expect(lateSpectator.locator('[data-spectator-court="1"] h2')).toHaveText(beforeCourt2Court1Game, { timeout: 7000 });
+  await expect.poll(
+    () => lateSpectator.locator('[data-spectator-court="1"] .spectator-court-matchup .spectator-player-name').evaluateAll(nodes =>
+      nodes.map(node => (node.childNodes[0]?.textContent || node.textContent || '').replace(/\s+$/, '').trim())
+    ),
+    { timeout: 7000 }
+  ).toEqual(beforeCourt2Court1Players);
   await expect(lateSpectator.locator('[data-spectator-court="2"]')).toBeVisible();
 
   await lateSpectator.close();
@@ -960,21 +981,66 @@ test('Version 7 spectator payload keeps the legacy single-court rendering path',
   await page.waitForTimeout(400);
 
   const snapshot = await page.evaluate(() => window.CRG_GET_LIVE_SNAPSHOT?.());
-  const legacy = { ...snapshot, version: 7 };
-  delete legacy.courts;
+  const legacy = {
+    version: 7,
+    sessionCode: 'CRG-V7FIXTURE2',
+    season: 'Legacy Fixture',
+    current: {
+      game: 'GAME 1',
+      index: 0,
+      court: 1,
+      teams: [
+        [{ name: 'Legacy Alice', skill: 'Intermediate' }, { name: 'Legacy Bob', skill: 'Advanced' }],
+        [{ name: 'Legacy Carol', skill: 'Beginner' }, { name: 'Legacy Dave', skill: 'Expert' }],
+      ],
+      sitting: ['Legacy Eve'],
+      status: 'NEXT UP',
+      timerSeconds: 42,
+      timerRunning: false,
+      timerStartedAt: null,
+    },
+    progress: { completed: 0, total: 1, percent: 0 },
+    schedule: [{
+      index: 1,
+      teams: [
+        [{ name: 'Legacy Alice', skill: 'Intermediate' }, { name: 'Legacy Bob', skill: 'Advanced' }],
+        [{ name: 'Legacy Carol', skill: 'Beginner' }, { name: 'Legacy Dave', skill: 'Expert' }],
+      ],
+      court: 1,
+      status: 'Upcoming',
+      done: false,
+      locked: false,
+      result: null,
+    }],
+    upNext: [],
+    matchLog: [],
+    rankings: [
+      { position: null, name: 'Legacy Alice', w: 0, l: 0, g: 0, winRate: '—' },
+      { position: null, name: 'Legacy Bob', w: 0, l: 0, g: 0, winRate: '—' },
+      { position: null, name: 'Legacy Carol', w: 0, l: 0, g: 0, winRate: '—' },
+      { position: null, name: 'Legacy Dave', w: 0, l: 0, g: 0, winRate: '—' },
+    ],
+    updatedAt: '2026-10-03T00:00:00.000Z',
+  };
 
   const spectator = await context.newPage();
   await installFakeSupabase(spectator);
   await spectator.goto('/');
   await spectator.evaluate(({ code, payload }) => {
     return window.__crgSeedLivePayload(code, payload, 'a'.repeat(64));
-  }, { code: snapshot.sessionCode, payload: legacy });
-  const liveUrl = '/?live=' + encodeURIComponent(snapshot.sessionCode) + '&view=spectator';
+  }, { code: legacy.sessionCode, payload: legacy });
+  const liveUrl = '/?live=' + encodeURIComponent(legacy.sessionCode) + '&view=spectator';
   await spectator.goto(liveUrl);
   await spectator.waitForLoadState('domcontentloaded');
 
   await expect(spectator.locator('.spectator-current')).toBeVisible();
-  await expect(spectator.locator('.spectator-current h2')).toHaveText(snapshot.current.game);
+  await expect(spectator.locator('.spectator-current h2')).toHaveText(legacy.current.game);
+  await expect(spectator.locator('.spectator-current .spectator-player-name')).toHaveCount(4);
+  await expect.poll(
+    () => spectator.locator('.spectator-current .spectator-player-name').evaluateAll(nodes =>
+      nodes.map(node => (node.childNodes[0]?.textContent || node.textContent || '').replace(/\s+$/, '').trim())
+    )
+  ).toEqual(['Legacy Alice', 'Legacy Bob', 'Legacy Carol', 'Legacy Dave']);
   await expect(spectator.locator('.spectator-court-card')).toHaveCount(0);
   await spectator.close();
 });
