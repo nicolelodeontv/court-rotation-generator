@@ -309,6 +309,7 @@ test('Live spectator link shows current game details and updates after a complet
   await spectator.waitForLoadState('domcontentloaded');
 
   await expect(spectator.locator('.spectator-current')).toBeVisible();
+  await expect(spectator.locator('.spectator-phone-lock-hint')).toHaveText('If your phone was locked, reload to refresh.');
   await expect.poll(() => spectator.evaluate(expected => window.__crgSelectCalls?.some(call => call.columns === 'session_code,payload,updated_at,expires_at' && call.sessionCodeHeader === expected) || false, liveCode)).toBeTruthy();
   await expect(spectator.locator('.spectator-current h2')).toHaveText(hostGame);
   await expect(spectator.locator('.spectator-current .eyebrow')).toContainText(hostCourt);
