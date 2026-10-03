@@ -324,37 +324,37 @@ main,.view,.card,.hero,.live-card,.ranking-hero,.live-main-column,.live-upnext-c
 }
 
 
-/* Sunlight theme: bright outdoor-friendly surfaces with restrained warm accent. */
+/* Sunlight theme: bright outdoor-friendly surfaces with high-contrast text. */
 :root[data-theme="sunlight"]{
   color-scheme:light;
   --color-background:#FFFFFF;
-  --color-text:#111827;
-  --color-primary:#334155;
-  --color-accent:#806000;
-  --color-surface:#F8FAFC;
-  --color-muted:#475569;
+  --color-text:#050505;
+  --color-primary:#050505;
+  --color-accent:#5C4300;
+  --color-surface:#FFFFFF;
+  --color-muted:#252A32;
   --color-match-win-bg:#DCFCE7;
   --color-match-loss-bg:#FEE2E2;
-  --color-match-tint-text:#111827;
+  --color-match-tint-text:#050505;
   --bg:var(--color-background);
   --surface:var(--color-surface);
-  --surface-2:#F1F5F9;
-  --surface-3:#E2E8F0;
+  --surface-2:#F5F6F8;
+  --surface-3:#E8EBEF;
   --text:var(--color-text);
   --muted:var(--color-muted);
-  --line:#CBD5E1;
+  --line:#BAC2CC;
   --accent:var(--color-accent);
-  --accent-soft:#6B4F00;
+  --accent-soft:var(--color-accent);
   --accent-ink:#FFFFFF;
-  --accent-border:#806000;
-  --accent-surface:#FFF7D6;
-  --status-current-bg:#1F2937;
+  --accent-border:var(--color-accent);
+  --accent-surface:#FFF4C7;
+  --status-current-bg:#111820;
   --status-current-text:#FFFFFF;
-  --danger:#B42318;
-  --danger-soft:#9A1B12;
+  --danger:#7F1D1D;
+  --danger-soft:#7F1D1D;
   --success:#166534;
   --success-soft:#166534;
-  --warning:#806000;
+  --warning:var(--color-accent);
   --shadow-sm:0 6px 16px rgba(15,23,42,.08);
   --shadow:0 12px 30px rgba(15,23,42,.08);
   --shadow-lg:0 24px 60px rgba(15,23,42,.12);
