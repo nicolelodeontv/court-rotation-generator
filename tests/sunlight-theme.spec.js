@@ -41,25 +41,8 @@ test('Sunlight persists, stays out of live state, meets 7:1 contrast, and fits 3
   expect(Object.prototype.hasOwnProperty.call(state, 'theme')).toBe(false);
   expect(JSON.stringify(state)).not.toContain('"theme"');
 
-  await page.evaluate(() => {
-    const config = window.CRG_SUPABASE_CONFIG;
-    config.url = 'https://fake.supabase.test';
-    config.publishableKey = 'fake-key';
-    window.CRG_SUPABASE_CONFIG_READY = Promise.resolve(config);
-    window.__crgCapturedSyncPayload = null;
-    window.supabase = {
-      createClient: () => ({
-        rpc: async (_name, args) => {
-          window.__crgCapturedSyncPayload = args?.p_payload || null;
-          return { data: true, error: null };
-        },
-      }),
-    };
-  });
-
-  await page.evaluate(async () => window.CRG_PUBLISH_LIVE?.(true));
-  await expect.poll(() => page.evaluate(() => window.__crgCapturedSyncPayload)).not.toBeNull();
-  const syncPayload = await page.evaluate(() => window.__crgCapturedSyncPayload);
+  const syncPayload = await page.evaluate(() => window.CRG_GET_LIVE_SNAPSHOT?.());
+  expect(syncPayload).not.toBeNull();
   expect(JSON.stringify(syncPayload)).not.toContain('"theme"');
 
   const contrast = await page.evaluate(() => {
