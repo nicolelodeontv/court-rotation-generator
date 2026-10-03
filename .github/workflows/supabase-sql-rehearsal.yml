@@ -13,7 +13,7 @@ on:
 
 jobs:
   supabase-sql-rehearsal:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: supabase/postgres:17.6.1.173
