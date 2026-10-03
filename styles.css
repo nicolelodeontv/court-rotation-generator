@@ -322,3 +322,40 @@ main,.view,.card,.hero,.live-card,.ranking-hero,.live-main-column,.live-upnext-c
   :root{--bottom-nav-clearance:109px}
   body.setup-nav-hidden{--bottom-nav-clearance:63px}
 }
+
+
+/* Sunlight theme: bright outdoor-friendly surfaces with high-contrast text. */
+:root[data-theme="sunlight"]{
+  color-scheme:light;
+  --color-background:#FFFFFF;
+  --color-text:#050505;
+  --color-primary:#050505;
+  --color-accent:#5C4300;
+  --color-surface:#FFFFFF;
+  --color-muted:#252A32;
+  --color-match-win-bg:#DCFCE7;
+  --color-match-loss-bg:#FEE2E2;
+  --color-match-tint-text:#050505;
+  --bg:var(--color-background);
+  --surface:var(--color-surface);
+  --surface-2:#F5F6F8;
+  --surface-3:#E8EBEF;
+  --text:var(--color-text);
+  --muted:var(--color-muted);
+  --line:#BAC2CC;
+  --accent:var(--color-accent);
+  --accent-soft:var(--color-accent);
+  --accent-ink:#FFFFFF;
+  --accent-border:var(--color-accent);
+  --accent-surface:#FFF4C7;
+  --status-current-bg:#111820;
+  --status-current-text:#FFFFFF;
+  --danger:#7F1D1D;
+  --danger-soft:#7F1D1D;
+  --success:#166534;
+  --success-soft:#166534;
+  --warning:var(--color-accent);
+  --shadow-sm:0 6px 16px rgba(15,23,42,.08);
+  --shadow:0 12px 30px rgba(15,23,42,.08);
+  --shadow-lg:0 24px 60px rgba(15,23,42,.12);
+}
