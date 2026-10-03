@@ -25,7 +25,10 @@ test('Sunlight persists, stays out of live state, meets 7:1 contrast, and fits 3
   await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('sunlight');
   await expect(page.locator('#themeBtn')).toHaveText('🌲 Forest');
 
-  await page.locator('#names').fill(roster(8));
+  await page.locator('#playerPasteBtn').click();
+  await page.locator('#pastePlayerNames').fill(roster(8));
+  await page.locator('#playerConfirm').click();
+  await expect(page.locator('#playerList .player-row')).toHaveCount(8, { timeout: 2500 });
   await page.locator('#courts').fill('1');
   await page.locator('#generateBtn').click();
   await expect(page.locator('#setupStatus')).toContainText('Rotation ready', { timeout: 8000 });
