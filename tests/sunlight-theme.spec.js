@@ -5,8 +5,11 @@ const roster = count => Array.from({ length: count }, (_, i) => 'Player ' + (i +
 test('Sunlight persists, stays out of live state, meets 7:1 contrast, and fits 390px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript(() => {
-    localStorage.removeItem('crg-theme');
-    localStorage.removeItem('crg-live-state-v1');
+    if (!localStorage.getItem('__crg-sunlight-theme-test-init')) {
+      localStorage.removeItem('crg-theme');
+      localStorage.removeItem('crg-live-state-v1');
+      localStorage.setItem('__crg-sunlight-theme-test-init', '1');
+    }
   });
 
   await page.goto('/');
