@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 
-const roster = count => Array.from({ length: count }, (_, i) => 'Player ' + (i + 1)).join('\\n');
+const roster = count => Array.from({ length: count }, (_, i) => 'Player ' + (i + 1)).join('\n');
 
 test('Sunlight persists, stays out of live state, meets 7:1 contrast, and fits 390px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -58,7 +58,7 @@ test('Sunlight persists, stays out of live state, meets 7:1 contrast, and fits 3
 
   const contrast = await page.evaluate(() => {
     const parseRgb = value => {
-      const match = String(value || '').match(/rgba?\\(([^)]+)\\)/i);
+      const match = String(value || '').match(/rgba?\(([^)]+)\)/i);
       if (!match) throw new Error('Expected an rgb/rgba color, got: ' + value);
       const [r, g, b] = match[1].split(',').map(part => Number.parseFloat(part.trim()));
       return { r, g, b };
@@ -84,9 +84,7 @@ test('Sunlight persists, stays out of live state, meets 7:1 contrast, and fits 3
       let current = node;
       while (current) {
         const background = getComputedStyle(current).backgroundColor;
-        if (background && !/^rgba\\(\\s*0\\s*,\\s*0\\s*,\\s*0\\s*,\\s*0\\s*\\)$/i.test(background)) {
-          return background;
-        }
+        if (background && !/^rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\)$/i.test(background)) return background;
         current = current.parentElement;
       }
       return getComputedStyle(document.body).backgroundColor;
@@ -136,8 +134,6 @@ test('Sunlight persists, stays out of live state, meets 7:1 contrast, and fits 3
         id: node.id,
         left: rect.left,
         right: rect.right,
-        top: rect.top,
-        bottom: rect.bottom,
         clientWidth: node.clientWidth,
         scrollWidth: node.scrollWidth,
       };
