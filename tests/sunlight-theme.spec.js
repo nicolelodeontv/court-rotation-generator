@@ -15,6 +15,7 @@ test('Sunlight persists, stays out of live state, meets 7:1 contrast, and fits 3
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
 
+  expect(await page.locator('head').innerHTML()).toContain("localStorage.getItem('crg-theme')==='sunlight'");
   await expect(page.locator('#themeBtn')).toHaveText('☀ Sunlight');
   await page.locator('#themeBtn').click();
   await expect.poll(() => page.locator('html').getAttribute('data-theme')).toBe('sunlight');
